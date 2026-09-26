@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPatientCrud();
   initNavigation();
   initChatAssistant();
+  initApiKeyModal();
   initTriageModule();
   initMedicationModule();
   initVitalsDashboard();
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   updateActiveProfileDisplay();
+  updateApiKeyStatusBadge();
 });
 
 function initIcons() {
@@ -80,6 +82,118 @@ function initGenAiInspector() {
     btn.addEventListener('click', () => {
       box.style.display = box.style.display === 'none' ? 'block' : 'none';
     });
+  }
+}
+
+// API Key Modal Controls
+function initApiKeyModal() {
+  const openBtn = document.getElementById('apiKeyConfigBtn');
+  const badgeBtn = document.getElementById('apiKeyStatusBadge');
+  const backdrop = document.getElementById('apiKeyModalBackdrop');
+  const closeBtn = document.getElementById('closeApiKeyModalBtn');
+  const input = document.getElementById('geminiApiKeyInput');
+  const testBtn = document.getElementById('testApiKeyBtn');
+  const saveBtn = document.getElementById('saveApiKeyBtn');
+  const clearBtn = document.getElementById('clearApiKeyBtn');
+  const resultBox = document.getElementById('apiKeyTestResultBox');
+
+  const openModal = () => {
+    if (input) input.value = aiEngine.getApiKey();
+    if (resultBox) resultBox.style.display = 'none';
+    if (backdrop) {
+      backdrop.classList.add('open');
+      backdrop.setAttribute('aria-hidden', 'false');
+    }
+  };
+
+  const closeModal = () => {
+    if (backdrop) {
+      backdrop.classList.remove('open');
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+  };
+
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (badgeBtn) badgeBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      const key = input ? input.value.trim() : '';
+      if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.style.background = 'rgba(6, 182, 212, 0.1)';
+        resultBox.style.color = 'var(--accent-cyan)';
+        resultBox.innerHTML = '⚡ Testing Gemini API connection...';
+      }
+
+      const res = await aiEngine.testConnection(key);
+      if (resultBox) {
+        if (res.success) {
+          resultBox.style.background = 'rgba(16, 185, 129, 0.15)';
+          resultBox.style.color = 'var(--accent-emerald)';
+          resultBox.innerHTML = `✅ ${res.message}`;
+        } else {
+          resultBox.style.background = 'rgba(244, 63, 94, 0.15)';
+          resultBox.style.color = 'var(--accent-rose)';
+          resultBox.innerHTML = `❌ ${res.message}`;
+        }
+      }
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const key = input ? input.value.trim() : '';
+      aiEngine.setApiKey(key);
+      updateApiKeyStatusBadge();
+      closeModal();
+      if (key) {
+        alert("Gemini API Key saved! Live AI calls enabled.");
+      } else {
+        alert("Switched to built-in Contextual Logic Engine.");
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      aiEngine.setApiKey('');
+      if (input) input.value = '';
+      updateApiKeyStatusBadge();
+      closeModal();
+      alert("API Key cleared. AuraCare AI will use the built-in Contextual Logic Engine.");
+    });
+  }
+}
+
+function updateApiKeyStatusBadge() {
+  const badge = document.getElementById('apiKeyStatusBadge');
+  const liveTag = document.getElementById('genAiLiveTag');
+  const key = aiEngine.getApiKey();
+
+  if (!badge) return;
+
+  if (key && key.trim().length > 10) {
+    badge.innerHTML = `🟢 Gemini API Live (${aiEngine.getModel()})`;
+    badge.style.background = 'rgba(16, 185, 129, 0.15)';
+    badge.style.color = 'var(--accent-emerald)';
+    badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+
+    if (liveTag) {
+      liveTag.innerText = `GEMINI API LIVE (${aiEngine.getModel()})`;
+      liveTag.style.background = 'var(--gradient-brand)';
+    }
+  } else {
+    badge.innerHTML = `🔑 Gemini API: Set Key (Using Built-In Engine)`;
+    badge.style.background = 'rgba(6, 182, 212, 0.1)';
+    badge.style.color = 'var(--accent-cyan)';
+    badge.style.borderColor = 'rgba(6, 182, 212, 0.3)';
+
+    if (liveTag) {
+      liveTag.innerText = `BUILT-IN GENAI ENGINE ACTIVE`;
+      liveTag.style.background = 'linear-gradient(135deg, #6366f1, #06b6d4)';
+    }
   }
 }
 
@@ -302,7 +416,6 @@ function initChatAssistant() {
   const sendBtn = document.getElementById('sendChatBtn');
   const chatInput = document.getElementById('chatInput');
   const micBtn = document.getElementById('micBtn');
-  const apiKeyBtn = document.getElementById('apiKeyConfigBtn');
   const audioToggle = document.getElementById('audioOutputToggle');
 
   if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
@@ -324,17 +437,6 @@ function initChatAssistant() {
       isAudioOutputEnabled = !isAudioOutputEnabled;
       audioToggle.style.color = isAudioOutputEnabled ? 'var(--accent-cyan)' : 'var(--text-dim)';
       if (!isAudioOutputEnabled) voiceAssistant.stopSpeaking();
-    });
-  }
-
-  if (apiKeyBtn) {
-    apiKeyBtn.addEventListener('click', () => {
-      const currentKey = aiEngine.getApiKey();
-      const newKey = prompt("Enter your Google Gemini API Key (Leave empty to use built-in Clinical Context Engine):", currentKey);
-      if (newKey !== null) {
-        aiEngine.setApiKey(newKey);
-        alert(newKey.trim() ? "Gemini API Key updated successfully!" : "Switched to built-in Contextual Logic Engine.");
-      }
     });
   }
 
@@ -374,6 +476,9 @@ async function handleSendMessage() {
   if (promptCode && aiResult.promptUsed) {
     promptCode.innerText = aiResult.promptUsed;
   }
+
+  // Update Badge
+  updateApiKeyStatusBadge();
 
   // Append AI Response
   appendChatMessage(container, 'ai', 'AuraCare AI', aiResult.text, aiResult.source);

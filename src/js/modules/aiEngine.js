@@ -1,27 +1,95 @@
 import { analyzeMedicationSafety } from './medSafety.js';
 
 /**
- * AI Reasoning Engine supporting Gemini API with contextual offline engine fallback.
+ * Advanced AI Reasoning Engine supporting Google Gemini API with multi-model fallbacks,
+ * error handling, connection testing, and contextual logic fallback.
  */
 
 export class AuraCareAIEngine {
   constructor() {
-    this.apiKey = localStorage.getItem('AURACARE_GEMINI_API_KEY') || '';
-    this.modelName = 'gemini-1.5-flash';
+    // Check localStorage or Vite environment variable
+    const envKey = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GEMINI_API_KEY : '';
+    this.apiKey = localStorage.getItem('AURACARE_GEMINI_API_KEY') || envKey || '';
+    
+    // Supported Gemini Models for auto-fallback
+    this.modelCandidates = [
+      'gemini-1.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-pro',
+      'gemini-pro'
+    ];
+    this.activeModel = localStorage.getItem('AURACARE_GEMINI_MODEL') || 'gemini-1.5-flash';
     this.lastPromptPayload = '';
+    this.lastError = null;
   }
 
   setApiKey(key) {
-    this.apiKey = key;
-    localStorage.setItem('AURACARE_GEMINI_API_KEY', key);
+    this.apiKey = key ? key.trim() : '';
+    localStorage.setItem('AURACARE_GEMINI_API_KEY', this.apiKey);
   }
 
   getApiKey() {
     return this.apiKey;
   }
 
+  setModel(modelName) {
+    this.activeModel = modelName;
+    localStorage.setItem('AURACARE_GEMINI_MODEL', modelName);
+  }
+
+  getModel() {
+    return this.activeModel;
+  }
+
+  getLastError() {
+    return this.lastError;
+  }
+
   getLastPromptPayload() {
     return this.lastPromptPayload;
+  }
+
+  /**
+   * Tests the Gemini API Key live
+   */
+  async testConnection(testKey = this.apiKey) {
+    if (!testKey || testKey.trim().length < 10) {
+      return { success: false, message: "API key is empty or too short." };
+    }
+
+    const cleanKey = testKey.trim();
+    for (const model of this.modelCandidates) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Respond with: API OK" }] }]
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            this.activeModel = model;
+            this.setApiKey(cleanKey);
+            return { success: true, model, message: `Connection Successful using model ${model}!` };
+          }
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          console.warn(`Model ${model} test failed (${response.status}):`, errData);
+        }
+      } catch (err) {
+        console.warn(`Network error testing model ${model}:`, err.message);
+      }
+    }
+
+    return { 
+      success: false, 
+      message: "Could not connect to Gemini API. Please check your API key, network connection, or quota limits." 
+    };
   }
 
   /**
@@ -57,32 +125,45 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
 
   async generateResponse(userQuery, profile, currentVitals, activeMeds) {
     const prompt = this.buildSystemContextPrompt(userQuery, profile, currentVitals, activeMeds);
+    this.lastError = null;
 
-    // If Gemini API Key is provided, call Gemini API
+    // If Gemini API Key is set, attempt call with model candidates
     if (this.apiKey && this.apiKey.trim().length > 10) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
-        });
+      const modelsToTry = [this.activeModel, ...this.modelCandidates.filter(m => m !== this.activeModel)];
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            return {
-              text,
-              source: 'Google Gemini 1.5 Flash (Live GenAI Model)',
-              timestamp: new Date().toLocaleTimeString(),
-              promptUsed: prompt
-            };
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey.trim()}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }]
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              this.activeModel = model;
+              return {
+                text,
+                source: `Google Gemini API (${model})`,
+                timestamp: new Date().toLocaleTimeString(),
+                promptUsed: prompt,
+                isLiveApi: true
+              };
+            }
+          } else {
+            const errJson = await response.json().catch(() => ({}));
+            this.lastError = errJson.error?.message || `HTTP ${response.status} Error`;
+            console.warn(`Gemini API call to ${model} returned error:`, response.status, errJson);
           }
+        } catch (err) {
+          this.lastError = err.message || "Network Error";
+          console.warn(`Fetch error calling ${model}:`, err);
         }
-      } catch (err) {
-        console.warn("Gemini API call failed, falling back to Contextual Logic Engine:", err);
       }
     }
 
@@ -90,9 +171,11 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
     const offlineResponse = this.generateContextualOfflineResponse(userQuery, profile, currentVitals, activeMeds);
     return {
       text: offlineResponse,
-      source: 'AuraCare GenAI Logic Engine (Contextual Reasoning)',
+      source: this.apiKey ? `AuraCare Engine (Fallback - ${this.lastError || 'API Error'})` : 'AuraCare GenAI Logic Engine (Built-In Contextual Model)',
       timestamp: new Date().toLocaleTimeString(),
-      promptUsed: prompt
+      promptUsed: prompt,
+      isLiveApi: false,
+      apiError: this.lastError
     };
   }
 
