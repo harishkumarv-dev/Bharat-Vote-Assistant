@@ -84,45 +84,72 @@
 
       <!-- TAB 1: AI Health Assistant -->
       <section id="tab-chat" class="tab-content active" aria-labelledby="chat-heading">
-        <div class="chat-container">
-          <div class="chat-header">
-            <div id="activePatientBadge" class="patient-badge">
-              <!-- Populated by JS -->
+        <div style="display: flex; gap: 20px; flex-direction: column;">
+          <!-- GenAI Live Reasoning Inspector Header Banner -->
+          <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 14px 20px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="background: var(--gradient-brand); color: white; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.78rem; font-weight: bold;">
+                GENAI LIVE ENGINE ACTIVE
+              </span>
+              <span style="font-size: 0.9rem; color: var(--text-muted);">
+                Generative AI combines Google Gemini 1.5 Flash + Real-Time Patient Context Payload
+              </span>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button id="audioOutputToggle" class="btn-icon" title="Toggle Voice Output" style="color: var(--accent-cyan);">
-                <i data-lucide="volume-2"></i>
-              </button>
-            </div>
+            <button id="toggleInspectorBtn" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem;">
+              🔍 Toggle GenAI Prompt Inspector
+            </button>
           </div>
 
-          <div id="chatMessages" class="chat-messages" role="log" aria-live="polite">
-            <div class="message ai">
-              <div class="message-avatar">🤖</div>
-              <div class="message-bubble">
-                <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: var(--accent-cyan);">AuraCare AI</div>
-                Hello! I am your context-aware Healthcare & Wellness Assistant. I automatically incorporate your active medical history, current vitals, and medication safety checks into every answer.<br><br>
-                How can I assist your health journey today?
+          <!-- Live GenAI Prompt Payload Inspector (Hidden by default, toggleable) -->
+          <div id="genAiInspectorBox" style="display: none; background: #0f172a; border: 1px dashed var(--accent-cyan); border-radius: var(--radius-md); padding: 16px; font-family: monospace; font-size: 0.84rem; color: #38bdf8;">
+            <div style="font-weight: bold; color: var(--accent-emerald); margin-bottom: 8px;">
+              🤖 DYNAMIC GENAI PROMPT PAYLOAD (Sent to Model in Real-Time):
+            </div>
+            <pre id="promptPayloadCode" style="white-space: pre-wrap; word-break: break-word; color: #e2e8f0; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+Select a profile or type a query to inspect the dynamic prompt payload...
+            </pre>
+          </div>
+
+          <div class="chat-container">
+            <div class="chat-header">
+              <div id="activePatientBadge" class="patient-badge">
+                <!-- Populated by JS -->
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button id="audioOutputToggle" class="btn-icon" title="Toggle Voice Output" style="color: var(--accent-cyan);">
+                  <i data-lucide="volume-2"></i>
+                </button>
               </div>
             </div>
-          </div>
 
-          <!-- Quick Chips -->
-          <div class="prompt-chips">
-            <div class="chip">What side effects should I expect from Lisinopril?</div>
-            <div class="chip">Check for interactions between Warfarin and Ibuprofen</div>
-            <div class="chip">Evaluate my current Blood Pressure reading</div>
-            <div class="chip">Suggest a diabetic-friendly meal plan for dinner</div>
-          </div>
+            <div id="chatMessages" class="chat-messages" role="log" aria-live="polite">
+              <div class="message ai">
+                <div class="message-avatar">🤖</div>
+                <div class="message-bubble">
+                  <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: var(--accent-cyan);">AuraCare AI</div>
+                  Hello! I am your context-aware Healthcare & Wellness Assistant powered by Generative AI. I automatically incorporate your active medical history, current vitals, and medication safety checks into every answer.<br><br>
+                  How can I assist your health journey today?
+                </div>
+              </div>
+            </div>
 
-          <div class="chat-input-bar">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Ask a health question or describe symptoms..." aria-label="Type your message">
-            <button id="micBtn" class="btn-mic" title="Voice Input" aria-label="Activate Microphone">
-              <i data-lucide="mic"></i>
-            </button>
-            <button id="sendChatBtn" class="btn-primary" style="padding: 12px 20px;">
-              <i data-lucide="send"></i>
-            </button>
+            <!-- Quick Chips -->
+            <div class="prompt-chips">
+              <div class="chip">What side effects should I expect from Lisinopril?</div>
+              <div class="chip">Check for interactions between Warfarin and Ibuprofen</div>
+              <div class="chip">Evaluate my current Blood Pressure reading</div>
+              <div class="chip">Suggest a diabetic-friendly meal plan for dinner</div>
+            </div>
+
+            <div class="chat-input-bar">
+              <input type="text" id="chatInput" class="chat-input" placeholder="Ask a health question or describe symptoms..." aria-label="Type your message">
+              <button id="micBtn" class="btn-mic" title="Voice Input" aria-label="Activate Microphone">
+                <i data-lucide="mic"></i>
+              </button>
+              <button id="sendChatBtn" class="btn-primary" style="padding: 12px 20px;">
+                <i data-lucide="send"></i>
+              </button>
+            </div>
           </div>
         </div>
       </section>

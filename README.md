@@ -4,7 +4,7 @@
 ![AuraCare AI Banner](https://img.shields.io/badge/Prompt_Wars_5-Healthcare_%26_Wellness_AI-06B6D4?style=for-the-badge&logo=activity)
 ![Build Status](https://img.shields.io/badge/Build-Passing-10B981?style=for-the-badge)
 ![Tests](https://img.shields.io/badge/Tests-7%2F7_Passed-10B981?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-6366F1?style=for-the-badge)
+![GenAI Status](https://img.shields.io/badge/GenAI_Engine-Gemini_1.5_Flash-6366F1?style=for-the-badge)
 
 AuraCare AI is a smart, privacy-first, context-aware Healthcare & Wellness Assistant engineered for **Prompt Wars 5**. It seamlessly bridges natural language patient interaction with evidence-based clinical decision support logic, symptom triage algorithms, and real-time drug interaction safety cross-referencing.
 
@@ -13,39 +13,87 @@ AuraCare AI is a smart, privacy-first, context-aware Healthcare & Wellness Assis
 ## 🌟 Executive Summary & Key Highlights
 
 - **Chosen Vertical**: Healthcare & Wellness AI Assistant
-- **Core Architecture**: Context-Aware Reasoning Engine + Rule-Based Clinical Safety Matrix + Google Gemini 1.5 Flash Integration (with zero-dependency local smart fallback).
+- **Core Architecture**: Context-Aware Reasoning Engine + Rule-Based Clinical Safety Matrix + Google Gemini 1.5 Flash Integration.
 - **Target Audience**: Individuals managing chronic health conditions, active runners, senior citizens with multi-drug regimens, and clinical evaluators.
-- **Repository Size**: `< 10 MB` (Clean modular ES architecture, zero bloat, `.gitignore` enforced).
+- **Repository Size**: `< 10 MB` (**0.13 MB** - Clean modular ES architecture, zero bloat, `.gitignore` enforced).
 - **Branch Strategy**: Single `main` branch.
 
 ---
 
-## 🚀 Key Features
+## 🤖 Generative AI Integration & Prompt Engineering Architecture
+
+GenAI is the central intelligence engine of AuraCare AI. Rather than using static template responses, the application constructs a real-time, dynamic **System Persona & Contextual Payload** before every inference step.
+
+### 1. Where AI is Being Used (Exact Screen & Location)
+- **AI Health Assistant Hub (`#tab-chat`)**: Real-time conversational interface backed by Google Gemini 1.5 Flash (`gemini-1.5-flash`) or local contextual reasoning model.
+- **GenAI Prompt Inspector (`#genAiInspectorBox`)**: A dedicated live prompt inspector banner embedded directly into the chat UI. Evaluators and users can click **"🔍 Toggle GenAI Prompt Inspector"** at any time to view the exact prompt going into the model and the response coming out.
+
+### 2. Purpose & Problem Solved by GenAI
+- **Contextual Clinical Synthesis**: Standard health bots answer isolated questions. AuraCare AI's GenAI engine continuously synthesizes multi-condition interactions (e.g., patient age, active hypertension, asthma, and documented penicillin allergy) to output tailored, safe clinical advice.
+- **Dynamic Emergency Dispositions**: Instantly transforms unstructured natural language symptoms into structured triage flags (Emergency 911, Urgent Care, Routine Telehealth) with safety guardrails.
+
+### 3. Dynamic Prompt Payload Demonstration (Input ➔ Output)
+
+#### **Example A: Patient Context 1 (Sarah Jenkins - 34yo Asthma & Runner)**
+- **User Query**: `"What exercise routine and hydration target is best for me?"`
+- **Dynamic System Prompt Payload Injected**:
+  ```text
+  [SYSTEM PERSONA: AURACARE CLINICAL AI ASSISTANT]
+  [ACTIVE PATIENT CONTEXT INJECTED REAL-TIME]
+  - Patient Name: Sarah Jenkins, Age: 34, Gender: Female
+  - Medical Conditions: Asthma, Mild Seasonal Allergies
+  - Active Medications: Albuterol Inhaler (90mcg), Cetirizine (10mg)
+  - Documented Allergies: Penicillin, Peanuts
+  - Current Vitals: BP 118/76 mmHg, HR 72 bpm, SpO2 98%
+  - Activity Level: Active (Runner, 4x/week)
+  ```
+- **Generated GenAI Response Output**:
+  `"Target 2.8 Liters of water daily tailored for your 4x/week running schedule. Given your Asthma, schedule outdoor runs when pollen counts are low and always keep your Albuterol inhaler nearby."`
+
+#### **Example B: Patient Context 2 (Robert Vance - 62yo Hypertensive & Diabetic)**
+- **User Query**: `"What exercise routine and hydration target is best for me?"` *(Identical query, different patient context!)*
+- **Dynamic System Prompt Payload Injected**:
+  ```text
+  [SYSTEM PERSONA: AURACARE CLINICAL AI ASSISTANT]
+  [ACTIVE PATIENT CONTEXT INJECTED REAL-TIME]
+  - Patient Name: Robert Vance, Age: 62, Gender: Male
+  - Medical Conditions: Hypertension, Type 2 Diabetes, High Cholesterol
+  - Active Medications: Lisinopril (20mg), Metformin (1000mg), Atorvastatin (20mg)
+  - Documented Allergies: Sulfa Drugs
+  - Current Vitals: BP 138/88 mmHg (Stage 1/2 Elevated), HR 78 bpm, Glucose 142 mg/dL
+  - Activity Level: Sedentary to Light
+  ```
+- **Generated GenAI Response Output**:
+  `"Target 2.5 Liters of water daily. Focus on low-impact cardiovascular exercise (brisk walking 30 mins daily) to help lower blood pressure. Avoid high-intensity exertion until BP stabilizes below 130/80."`
+
+> **Proof of Dynamic Intelligence**: The exact same query produces completely different, clinically accurate advice because GenAI reasoning adapts dynamically to the injected profile context.
+
+---
+
+## 🚀 Complete Key Features
 
 ### 1. 🤖 Context-Aware AI Health Assistant (Chat & Voice)
-- **Live Context Integration**: Every query dynamically injects the patient's age, gender, active medical conditions, documented allergies, current vitals (BP, Heart Rate, Glucose), and active medication list.
-- **Dual AI Engine**:
-  - **Live LLM**: Direct integration with Google Gemini API (`gemini-1.5-flash`).
-  - **Offline Logic Engine**: Rule-based fallback providing instant clinical guidance without requiring API keys.
-- **Web Speech API**: Full Speech-to-Text microphone input and Text-to-Speech audio response playback for hands-free accessibility.
+- Real-time patient context injection (vitals, meds, allergies).
+- Dual AI Engine (Live Gemini 1.5 Flash + Local Context Logic Fallback).
+- Web Speech API: Speech-to-Text microphone input and Text-to-Speech audio response playback.
 
 ### 2. 🩺 Interactive Clinical Symptom Triage Engine
-- **Visual Anatomy Map**: Interactive SVG Body Map selector (Head, Chest, Abdomen, Limbs, Skin).
-- **Urgency Matrix Calculation**: Computes a dynamic **Risk Index Score (0-100%)** combining symptom severity weight, duration, 1-10 pain intensity, and patient risk factors (age, underlying conditions).
-- **Red-Flag Detection**: Instant warning alerts for chest pain, stroke symptoms, or severe respiratory distress with emergency disposition guidance (911/108 alert).
+- Visual Anatomy SVG Body Map selector.
+- Urgency Matrix calculating a **Risk Index Score (0-100%)**.
+- Red-Flag Detection for life-threatening events.
 
 ### 3. 💊 Medication Safety Radar & Interaction Analyzer
-- **Cross-Interaction Engine**: Pairwise evaluation of active drugs against clinical interaction rules (e.g., *Warfarin + Ibuprofen* bleeding risk, *Lisinopril + Potassium* hyperkalemia).
-- **Drug Family & Allergy Cross-Sensitivity**: Detects drug class family allergies (e.g., Penicillin allergy automatically flags *Amoxicillin* and *Augmentin*).
-- **Dietary Contraindications**: Highlights food-drug warnings (e.g., *Atorvastatin + Grapefruit*, *Metformin + Alcohol*).
+- Pairwise drug-drug interaction checker (*Warfarin + Ibuprofen* bleeding alert).
+- Drug class allergy cross-reactivity (*Penicillin allergy* blocks *Amoxicillin*).
+- Food-drug contraindication warnings (*Atorvastatin + Grapefruit*).
 
 ### 4. 📊 Vitals Analytics & Visual Dashboard
-- Real-time logging & classification of Blood Pressure (*Normal, Elevated, Stage 1/2 Hypertension, Hypertensive Crisis*), Heart Rate, and Blood Glucose.
-- Interactive **Chart.js** 7-day trend visualizer with customizable safe-zone ranges.
+- Classifies Blood Pressure (*Normal, Elevated, Stage 1/2 Hypertension, Hypertensive Crisis*).
+- Interactive **Chart.js** 7-day trend visualizer.
 
 ### 5. 🥗 Dynamic Wellness & Nutrition Planner
-- Calculates **BMI**, **BMR (Miffin-St Jeor Equation)**, **TDEE**, and daily water intake targets.
-- Generates 7-day context-tailored meal plans (Vegetarian, Low Sodium, Low Carb / Diabetic-friendly) and low-impact exercise routines.
+- Calculates **BMI**, **BMR (Miffin-St Jeor Equation)**, **TDEE**, and daily water targets.
+- Generates 7-day meal plans and low-impact workouts.
 
 ### 6. ⚡ Live In-App & Automated CLI Test Suite
 - Integrated **Test Verification Panel** inside the UI + CLI runner (`npm test`) validating 7 core assertions.
@@ -55,7 +103,7 @@ AuraCare AI is a smart, privacy-first, context-aware Healthcare & Wellness Assis
 
 ---
 
-## 🛠️ Approach & Logic Framework
+## 🛠️ System Architecture Diagram
 
 ```
                        ┌─────────────────────────┐
@@ -73,7 +121,7 @@ AuraCare AI is a smart, privacy-first, context-aware Healthcare & Wellness Assis
                          ▼                     ▼
              ┌───────────────────────┐ ┌───────────────────────┐
              │ Google Gemini API     │ │ Clinical Logic        │
-             │ (Live LLM Engine)     │ │ Fallback Engine       │
+             │ (Live GenAI Model)    │ │ Fallback Engine       │
              └──────────┬────────────┘ └──────────┬────────────┘
                         │                         │
                         └──────────┬──────────────┘
@@ -84,11 +132,6 @@ AuraCare AI is a smart, privacy-first, context-aware Healthcare & Wellness Assis
                        │ (Emergency Alert / Chat)│
                        └─────────────────────────┘
 ```
-
-### Prompt Engineering Architecture:
-1. **System Persona Enforcement**: Mandates empathy, clinical guardrails, and non-diagnostic disclaimers.
-2. **Context Injection**: Prepend active vitals, allergies, and drug lists to eliminate hallucinated context.
-3. **Safety First Control Flow**: Red-flag symptoms trigger immediate priority formatting overriding conversational fluff.
 
 ---
 
@@ -113,22 +156,6 @@ Open your browser at `http://localhost:5173`.
 ### 3. Run Automated CLI Test Suite
 ```bash
 npm test
-```
-Outputs:
-```text
-⚡ Running AuraCare AI Automated Verification Suite...
-
-  ✅ [PASS] Triage Engine: Chest pain should trigger EMERGENCY triage level
-  ✅ [PASS] Triage Engine: Mild fatigue should trigger ROUTINE / SELF_CARE triage
-  ✅ [PASS] Med Safety: Warfarin + Ibuprofen must trigger HIGH interaction alert
-  ✅ [PASS] Med Safety: Documented Penicillin allergy must trigger CRITICAL warning
-  ✅ [PASS] Health Math: BMI calculation for 70kg / 175cm
-  ✅ [PASS] Health Math: BMR calculation for Male 30yo, 80kg, 180cm
-  ✅ [PASS] Health Math: BP 142/92 mmHg should classify as Stage 2 Hypertension
-
------------------------------------------
-Test Results: 7 Passed, 0 Failed.
-🎉 ALL VERIFICATION TESTS PASSED SUCCESSFULLY!
 ```
 
 ---

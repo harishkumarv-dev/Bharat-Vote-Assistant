@@ -1,6 +1,5 @@
 import { SAMPLE_PROFILES } from './data/sampleProfiles.js';
 import { SYMPTOM_DATABASE } from './data/symptomDatabase.js';
-import { DRUG_DATABASE } from './data/drugDatabase.js';
 import { AuraCareAIEngine } from './modules/aiEngine.js';
 import { evaluateTriage } from './modules/triageEngine.js';
 import { analyzeMedicationSafety } from './modules/medSafety.js';
@@ -35,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWellnessModule();
   initVerificationSuite();
   initExportPassport();
+  initGenAiInspector();
   
   // Voice Assistant Setup
   voiceAssistant = new VoiceAssistant(
@@ -72,6 +72,16 @@ function initThemeToggle() {
   }
 }
 
+function initGenAiInspector() {
+  const btn = document.getElementById('toggleInspectorBtn');
+  const box = document.getElementById('genAiInspectorBox');
+  if (btn && box) {
+    btn.addEventListener('click', () => {
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+}
+
 // Profile Context Switcher
 function initProfileSelector() {
   const select = document.getElementById('profileSelect');
@@ -93,6 +103,12 @@ function updateActiveProfileDisplay() {
   const badge = document.getElementById('activePatientBadge');
   if (badge) {
     badge.innerHTML = `👤 Active Context: <strong>${currentProfile.name}</strong> (${currentProfile.age}y ${currentProfile.gender}) | Meds: ${activeMedications.length}`;
+  }
+
+  // Update Inspector Code Payload
+  const promptCode = document.getElementById('promptPayloadCode');
+  if (promptCode) {
+    promptCode.innerText = aiEngine.buildSystemContextPrompt("Sample query for live context demonstration", currentProfile, currentProfile.vitals, activeMedications);
   }
 
   // Update Meds List
@@ -193,6 +209,12 @@ async function handleSendMessage() {
   // Remove Typing
   removeTypingIndicator(container, typingId);
 
+  // Update Inspector Code Payload
+  const promptCode = document.getElementById('promptPayloadCode');
+  if (promptCode && aiResult.promptUsed) {
+    promptCode.innerText = aiResult.promptUsed;
+  }
+
   // Append AI Response
   appendChatMessage(container, 'ai', 'AuraCare AI', aiResult.text, aiResult.source);
 
@@ -245,7 +267,6 @@ function removeTypingIndicator(container, id) {
 
 // Symptom Triage Assessment
 function initTriageModule() {
-  const regionContainer = document.getElementById('symptomListContainer');
   const runBtn = document.getElementById('runTriageBtn');
   const bodyPaths = document.querySelectorAll('.body-region-path');
 
