@@ -2,15 +2,17 @@ import { GoogleGenAI } from '@google/genai';
 import { analyzeMedicationSafety } from './medSafety.js';
 
 /**
- * Live Google Gemini AI Engine using official @google/genai SDK
- * with automatic model selection and clear API Key guidance.
+ * Live Google Gemini AI Engine with Dynamic Model Auto-Discovery
+ * Lists available models directly from Google AI API to guarantee valid key detection
+ * and auto-selects the newest working model.
  */
 
 export class AuraCareAIEngine {
   constructor() {
     const envKey = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GEMINI_API_KEY : '';
     this.apiKey = localStorage.getItem('AURACARE_GEMINI_API_KEY') || envKey || '';
-    this.activeModel = localStorage.getItem('AURACARE_GEMINI_MODEL') || 'gemini-2.5-flash';
+    this.activeModel = localStorage.getItem('AURACARE_GEMINI_MODEL') || 'gemini-1.5-flash';
+    this.availableModels = [];
     this.lastPromptPayload = '';
     this.lastError = null;
   }
@@ -42,57 +44,150 @@ export class AuraCareAIEngine {
   }
 
   /**
-   * Tests the Gemini API Key live using @google/genai SDK & fetch
+   * Fetches available models for the given API Key directly from Google API
+   */
+  async discoverAvailableModels(cleanKey) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`;
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.models && Array.isArray(data.models)) {
+          // Filter models that support generateContent
+          const generateModels = data.models
+            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace(/^models\//, ''));
+
+          if (generateModels.length > 0) {
+            this.availableModels = generateModels;
+            return { validKey: true, models: generateModels };
+          }
+        }
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        const msg = errJson.error?.message || `HTTP ${response.status} Error`;
+        return { validKey: false, error: msg };
+      }
+    } catch (err) {
+      console.warn("Error fetching Gemini models list:", err);
+      return { validKey: false, error: err.message || "Network Error" };
+    }
+    return { validKey: false, error: "Unable to retrieve model list" };
+  }
+
+  /**
+   * Tests the Gemini API Key live and auto-selects the newest working model
    */
   async testConnection(testKey = this.apiKey) {
-    if (!testKey || testKey.trim().length < 10) {
+    if (!testKey || testKey.trim().length < 8) {
       return { success: false, message: "API key is empty or too short." };
     }
 
     const cleanKey = testKey.trim();
-    const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
 
-    for (const model of candidateModels) {
-      try {
-        const ai = new GoogleGenAI({ apiKey: cleanKey });
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: "Hello! Confirm Gemini connection."
-        });
+    // 1. Discover models available for this API Key
+    const discovery = await this.discoverAvailableModels(cleanKey);
 
-        if (response && response.text) {
-          this.activeModel = model;
+    if (discovery.validKey && discovery.models.length > 0) {
+      // Pick best available model (prioritize 2.0-flash, 1.5-flash, 1.5-pro, 2.0-flash-lite, etc.)
+      const priorityOrder = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-2.5-flash',
+        'gemini-1.5-pro',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash-8b',
+        'gemini-pro'
+      ];
+
+      let chosenModel = discovery.models.find(m => priorityOrder.includes(m)) || discovery.models[0];
+
+      // Test generation with chosen model
+      const testResult = await this.tryGenerateWithModel(cleanKey, chosenModel, "Hello! Confirm Gemini API connection.");
+      if (testResult.success) {
+        this.activeModel = chosenModel;
+        this.setApiKey(cleanKey);
+        return { 
+          success: true, 
+          model: chosenModel, 
+          message: `Valid API Key! Connected to Google Gemini using model ${chosenModel}.` 
+        };
+      }
+
+      // If chosenModel failed generation, test other discovered models
+      for (const altModel of discovery.models) {
+        if (altModel === chosenModel) continue;
+        const altTest = await this.tryGenerateWithModel(cleanKey, altModel, "Hello! Confirm Gemini API connection.");
+        if (altTest.success) {
+          this.activeModel = altModel;
           this.setApiKey(cleanKey);
-          return { success: true, model, message: `Successfully connected to Google Gemini (${model})!` };
+          return { 
+            success: true, 
+            model: altModel, 
+            message: `Valid API Key! Connected to Google Gemini using model ${altModel}.` 
+          };
         }
-      } catch (err) {
-        console.warn(`SDK Test for ${model} failed, testing REST endpoint:`, err.message);
-        
-        // Direct REST Fallback Test
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-              this.activeModel = model;
-              this.setApiKey(cleanKey);
-              return { success: true, model, message: `Successfully connected to Google Gemini (${model})!` };
-            }
-          }
-        } catch (fetchErr) {
-          console.warn(`REST Test for ${model} failed:`, fetchErr);
-        }
+      }
+    }
+
+    // Fallback candidates test if models.list was blocked
+    const hardcodedCandidates = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite', 'gemini-pro'];
+    for (const model of hardcodedCandidates) {
+      const res = await this.tryGenerateWithModel(cleanKey, model, "Hello! Confirm Gemini connection.");
+      if (res.success) {
+        this.activeModel = model;
+        this.setApiKey(cleanKey);
+        return { success: true, model, message: `Valid API Key! Connected to Google Gemini using model ${model}.` };
       }
     }
 
     return { 
       success: false, 
-      message: "Invalid API key or network error. Please verify your API Key from Google AI Studio (https://aistudio.google.com/app/apikey)." 
+      message: discovery.error 
+        ? `API Key Validation Failed: ${discovery.error}` 
+        : "Invalid API Key or quota limit reached. Please verify your key at https://aistudio.google.com/app/apikey." 
     };
+  }
+
+  async tryGenerateWithModel(cleanKey, modelName, textPrompt) {
+    // Try SDK first
+    try {
+      const ai = new GoogleGenAI({ apiKey: cleanKey });
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: textPrompt
+      });
+      if (response && response.text) {
+        return { success: true, text: response.text };
+      }
+    } catch (e) {
+      console.warn(`SDK call for ${modelName} failed:`, e.message);
+    }
+
+    // Try REST second
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: textPrompt }] }] })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const output = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (output) {
+          return { success: true, text: output };
+        }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        return { success: false, error: errJson.error?.message || `HTTP ${res.status}` };
+      }
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+
+    return { success: false, error: "Generation failed" };
   }
 
   /**
@@ -131,7 +226,7 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
     this.lastError = null;
 
     // Check if API key is present
-    if (!this.apiKey || this.apiKey.trim().length < 10) {
+    if (!this.apiKey || this.apiKey.trim().length < 8) {
       return {
         text: `🔑 **Google Gemini API Key Required**\n\n` +
               `To get real, live responses directly from Google Gemini AI, please enter your Gemini API Key.\n\n` +
@@ -149,74 +244,52 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
     }
 
     const cleanKey = this.apiKey.trim();
-    const candidateModels = [this.activeModel, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
 
-    // 1. Try official @google/genai SDK
-    for (const model of candidateModels) {
-      try {
-        const ai = new GoogleGenAI({ apiKey: cleanKey });
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: prompt
-        });
-
-        if (response && response.text) {
-          this.activeModel = model;
-          return {
-            text: response.text,
-            source: `Google Gemini API (${model})`,
-            timestamp: new Date().toLocaleTimeString(),
-            promptUsed: prompt,
-            isLiveApi: true
-          };
+    // Auto-discover available models if not loaded
+    if (this.availableModels.length === 0) {
+      const disc = await this.discoverAvailableModels(cleanKey);
+      if (disc.validKey && disc.models.length > 0) {
+        if (!disc.models.includes(this.activeModel)) {
+          this.activeModel = disc.models[0];
         }
-      } catch (sdkErr) {
-        console.warn(`SDK call with model ${model} failed:`, sdkErr.message);
-        this.lastError = sdkErr.message;
       }
     }
 
-    // 2. Direct REST Fallback if SDK had an issue
-    for (const model of candidateModels) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
-        });
+    const modelsToTry = [
+      this.activeModel,
+      ...this.availableModels,
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-2.0-flash-lite',
+      'gemini-pro'
+    ];
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            this.activeModel = model;
-            return {
-              text,
-              source: `Google Gemini REST API (${model})`,
-              timestamp: new Date().toLocaleTimeString(),
-              promptUsed: prompt,
-              isLiveApi: true
-            };
-          }
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          this.lastError = errJson?.error?.message || `HTTP ${response.status} Error`;
-        }
-      } catch (fetchErr) {
-        console.warn(`REST call with model ${model} failed:`, fetchErr.message);
-        this.lastError = fetchErr.message;
+    // Deduplicate models to try
+    const uniqueModels = [...new Set(modelsToTry)];
+
+    for (const model of uniqueModels) {
+      const res = await this.tryGenerateWithModel(cleanKey, model, prompt);
+      if (res.success && res.text) {
+        this.activeModel = model;
+        return {
+          text: res.text,
+          source: `Google Gemini API (${model})`,
+          timestamp: new Date().toLocaleTimeString(),
+          promptUsed: prompt,
+          isLiveApi: true
+        };
+      } else if (res.error) {
+        this.lastError = res.error;
       }
     }
 
-    // Return detailed error if API call failed
+    // Return detailed error if all models failed
     return {
       text: `⚠️ **Gemini API Call Failed**\n\n` +
-            `Error message: *${this.lastError || "Invalid API key or network block"}*\n\n` +
-            `Please click **🔑 Gemini API** at the top right to re-enter a valid API key from [Google AI Studio](https://aistudio.google.com/app/apikey).`,
-      source: `Gemini API Error (${this.lastError || 'Network/Key Error'})`,
+            `Google API returned error: *${this.lastError || "Invalid API key or model unavailable"}*\n\n` +
+            `Please click **🔑 Gemini API** at the top right to verify your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).`,
+      source: `Gemini API Error (${this.lastError || 'Key Error'})`,
       timestamp: new Date().toLocaleTimeString(),
       promptUsed: prompt,
       isLiveApi: false,
