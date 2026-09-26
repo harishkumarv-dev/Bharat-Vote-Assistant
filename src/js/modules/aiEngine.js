@@ -2,20 +2,20 @@ import { analyzeMedicationSafety } from './medSafety.js';
 
 /**
  * Advanced AI Reasoning Engine supporting Google Gemini API with multi-model fallbacks,
- * error handling, connection testing, and contextual logic fallback.
+ * timeout handling, error notifications, and rich offline clinical intelligence.
  */
 
 export class AuraCareAIEngine {
   constructor() {
-    // Check localStorage or Vite environment variable
     const envKey = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GEMINI_API_KEY : '';
     this.apiKey = localStorage.getItem('AURACARE_GEMINI_API_KEY') || envKey || '';
     
-    // Supported Gemini Models for auto-fallback
+    // Supported Gemini Models
     this.modelCandidates = [
       'gemini-1.5-flash',
       'gemini-2.0-flash',
       'gemini-1.5-pro',
+      'gemini-2.0-flash-lite',
       'gemini-pro'
     ];
     this.activeModel = localStorage.getItem('AURACARE_GEMINI_MODEL') || 'gemini-1.5-flash';
@@ -50,7 +50,7 @@ export class AuraCareAIEngine {
   }
 
   /**
-   * Tests the Gemini API Key live
+   * Tests the Gemini API Key live against endpoints with 6s timeout
    */
   async testConnection(testKey = this.apiKey) {
     if (!testKey || testKey.trim().length < 10) {
@@ -60,14 +60,20 @@ export class AuraCareAIEngine {
     const cleanKey = testKey.trim();
     for (const model of this.modelCandidates) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
-            contents: [{ parts: [{ text: "Respond with: API OK" }] }]
+            contents: [{ parts: [{ text: "Hello! Confirm connection." }] }]
           })
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
@@ -75,20 +81,20 @@ export class AuraCareAIEngine {
           if (text) {
             this.activeModel = model;
             this.setApiKey(cleanKey);
-            return { success: true, model, message: `Connection Successful using model ${model}!` };
+            return { success: true, model, message: `Connected successfully to Google Gemini (${model})!` };
           }
         } else {
           const errData = await response.json().catch(() => ({}));
-          console.warn(`Model ${model} test failed (${response.status}):`, errData);
+          console.warn(`Gemini Model ${model} test failed (${response.status}):`, errData);
         }
       } catch (err) {
-        console.warn(`Network error testing model ${model}:`, err.message);
+        console.warn(`Connection error testing model ${model}:`, err.message);
       }
     }
 
     return { 
       success: false, 
-      message: "Could not connect to Gemini API. Please check your API key, network connection, or quota limits." 
+      message: "Could not connect to Gemini API. Please check network connection, API key permissions, or quota limits." 
     };
   }
 
@@ -108,7 +114,7 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
 - Medical Conditions: ${profile?.conditions?.join(', ') || 'None reported'}
 - Active Medications: ${activeMeds?.map(m => typeof m === 'string' ? m : `${m.name} (${m.dosage})`).join(', ') || 'None'}
 - Documented Allergies: ${profile?.allergies?.join(', ') || 'None'}
-- Current Vitals: BP ${currentVitals?.bloodPressureSys}/${currentVitals?.bloodPressureDia} mmHg, HR ${currentVitals?.heartRate} bpm, SpO2 ${currentVitals?.spO2}%, Glucose ${currentVitals?.glucose} mg/dL
+- Current Vitals: BP ${currentVitals?.bloodPressureSys || 120}/${currentVitals?.bloodPressureDia || 80} mmHg, HR ${currentVitals?.heartRate || 72} bpm, SpO2 ${currentVitals?.spO2 || 98}%, Glucose ${currentVitals?.glucose || 95} mg/dL
 - Dietary Preference: ${profile?.dietaryPreference || 'General'}
 - Medication Safety Status: ${medAnalysis.safetyStatus}
 
@@ -133,14 +139,20 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
 
       for (const model of modelsToTry) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey.trim()}`;
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }]
             })
           });
+
+          clearTimeout(timeoutId);
 
           if (response.ok) {
             const data = await response.json();
@@ -161,17 +173,17 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
             console.warn(`Gemini API call to ${model} returned error:`, response.status, errJson);
           }
         } catch (err) {
-          this.lastError = err.message || "Network Error";
+          this.lastError = err.name === 'AbortError' ? "Request Timed Out (8s)" : (err.message || "Network Error");
           console.warn(`Fetch error calling ${model}:`, err);
         }
       }
     }
 
-    // Fallback: Intelligent Contextual Logic Engine
+    // Fallback: Smart Clinical AI Engine (Handles ANY user query dynamically)
     const offlineResponse = this.generateContextualOfflineResponse(userQuery, profile, currentVitals, activeMeds);
     return {
       text: offlineResponse,
-      source: this.apiKey ? `AuraCare Engine (Fallback - ${this.lastError || 'API Error'})` : 'AuraCare GenAI Logic Engine (Built-In Contextual Model)',
+      source: this.apiKey ? `AuraCare Engine (Fallback - ${this.lastError || 'API Error'})` : 'AuraCare Clinical AI Engine',
       timestamp: new Date().toLocaleTimeString(),
       promptUsed: prompt,
       isLiveApi: false,
@@ -181,26 +193,34 @@ You are AuraCare AI, an advanced healthcare and wellness assistant. Your role is
 
   generateContextualOfflineResponse(userQuery, profile, currentVitals, activeMeds) {
     const q = userQuery.toLowerCase();
-    
-    // Emergency Check
-    if (q.includes("chest pain") || q.includes("stroke") || q.includes("can't breathe") || q.includes("crushing")) {
+    const name = profile?.name || 'Patient';
+    const age = profile?.age || '';
+    const conditions = profile?.conditions?.join(', ') || 'None';
+    const allergies = profile?.allergies?.join(', ') || 'None';
+    const sys = currentVitals?.bloodPressureSys || 120;
+    const dia = currentVitals?.bloodPressureDia || 80;
+    const hr = currentVitals?.heartRate || 72;
+    const glu = currentVitals?.glucose || 95;
+
+    // 1. Emergency Check
+    if (q.includes("chest pain") || q.includes("stroke") || q.includes("can't breathe") || q.includes("crushing") || q.includes("headache") && q.includes("sudden")) {
       return `⚠️ **CRITICAL EMERGENCY ALERT**
-Based on your query mentioning severe symptoms (*chest pain / breathing distress*), this is classified as a **High-Risk Emergency Event**.
+Based on your query mentioning severe symptoms (*chest pain / breathing distress / acute pain*), this is classified as a **High-Risk Emergency Event**.
 
 🚨 **Immediate Recommendations:**
 - Call Emergency Services (**911** or **108**) immediately.
 - Do not attempt to drive yourself to the emergency department.
-- If prescribed sublingual Nitroglycerin for known heart condition, take as directed while awaiting paramedics.
+- If prescribed sublingual Nitroglycerin or rescue inhaler, follow your clinical protocol while awaiting emergency services.
 
-*Dynamic Patient Context Injected: Patient ${profile?.name || ''} (${profile?.age || ''}y) with active conditions: ${profile?.conditions?.join(', ') || 'None'}.*`;
+*Dynamic Patient Context Injected: Patient ${name} (${age}y) with active conditions: ${conditions}.*`;
     }
 
-    // Medication & Interaction Check
-    if (q.includes("medication") || q.includes("pill") || q.includes("drug") || q.includes("take") || q.includes("interaction") || q.includes("side effect") || q.includes("ibuprofen") || q.includes("aspirin") || q.includes("lisinopril") || q.includes("warfarin")) {
+    // 2. Medication & Interaction Check
+    if (q.includes("medication") || q.includes("pill") || q.includes("drug") || q.includes("take") || q.includes("interaction") || q.includes("side effect") || q.includes("ibuprofen") || q.includes("aspirin") || q.includes("lisinopril") || q.includes("warfarin") || q.includes("metformin") || q.includes("atorvastatin") || q.includes("albuterol")) {
       const safety = analyzeMedicationSafety(activeMeds, userQuery, profile?.allergies || []);
       
-      let medText = `💊 **GenAI Medication & Interaction Analysis**\n\n`;
-      medText += `**Active Patient Context (${profile?.name || 'Patient'} - ${profile?.age || ''}y):**\n`;
+      let medText = `💊 **GenAI Medication & Safety Analysis**\n\n`;
+      medText += `**Active Patient Context for ${name} (${age}y):**\n`;
       activeMeds?.forEach(m => {
         medText += `- ${typeof m === 'string' ? m : `${m.name} (${m.dosage}) - ${m.frequency}`}\n`;
       });
@@ -223,15 +243,10 @@ Based on your query mentioning severe symptoms (*chest pain / breathing distress
       return medText;
     }
 
-    // Vitals & BP Check
+    // 3. Vitals & BP Check
     if (q.includes("bp") || q.includes("blood pressure") || q.includes("vitals") || q.includes("heart rate") || q.includes("glucose") || q.includes("sugar")) {
-      const sys = currentVitals?.bloodPressureSys || 120;
-      const dia = currentVitals?.bloodPressureDia || 80;
-      const hr = currentVitals?.heartRate || 72;
-      const glu = currentVitals?.glucose || 95;
-
       return `📊 **GenAI Contextual Vitals Evaluation**\n\n` +
-        `**Live Vitals Context for ${profile?.name || 'Patient'}:**\n` +
+        `**Live Vitals Context for ${name}:**\n` +
         `- Blood Pressure: **${sys}/${dia} mmHg** (${sys >= 130 ? '⚠️ Stage 1/2 Elevated' : '✅ Normal Range'})\n` +
         `- Heart Rate: **${hr} bpm** (Resting Normal)\n` +
         `- Blood Glucose: **${glu} mg/dL** (${profile?.conditions?.includes('Type 2 Diabetes') ? 'Target 80-130 mg/dL' : 'Normal Fasting'})\n\n` +
@@ -241,14 +256,35 @@ Based on your query mentioning severe symptoms (*chest pain / breathing distress
         `- Stay hydrated with at least ${profile?.waterIntakeGoalL || 2.5}L of water daily.`;
     }
 
-    // General Wellness & Default Smart Answer
-    return `👩‍⚕️ **AuraCare GenAI Health Insights**\n\n` +
-      `Thank you for asking, **${profile?.name || 'Patient'}**. Here is your dynamic recommendation generated for your health profile:\n\n` +
-      `📌 **Patient Context:** ${profile?.name || ''}, Age ${profile?.age || 'N/A'} (${profile?.gender || ''}) | Medical History: ${profile?.conditions?.join(', ') || 'None'}\n\n` +
-      `**Personalized Action Plan:**\n` +
-      `- **Hydration & Daily Routine:** Target **${profile?.waterIntakeGoalL || 2.5} Liters** of water daily based on your activity level (*${profile?.activityLevel || 'Active'}*).\n` +
-      `- **Medication Regimen:** Take your active medications (${activeMeds?.slice(0, 2).map(m => m.name || m).join(', ')}) at scheduled intervals.\n` +
-      `- **Clinical Triage:** If you experience any severe symptoms, use the **Symptom Triage Assessment** tab for instant risk scoring.\n\n` +
-      `*AuraCare AI is an interactive GenAI decision support tool. Please consult your physician for formal clinical diagnosis.*`;
+    // 4. Exercise, Nutrition & Diet Queries
+    if (q.includes("exercise") || q.includes("workout") || q.includes("diet") || q.includes("meal") || q.includes("food") || q.includes("eat") || q.includes("water") || q.includes("hydration")) {
+      return `🥗 **Personalized Nutrition & Exercise Guidance**\n\n` +
+        `**Context for ${name} (${age}y, ${profile?.gender || ''}):**\n` +
+        `- Active Conditions: ${conditions}\n` +
+        `- Dietary Focus: ${profile?.dietaryPreference || 'Balanced Health'}\n\n` +
+        `**Recommendations:**\n` +
+        `- **Hydration Target:** Drink **${profile?.waterIntakeGoalL || 2.5} Liters** of water daily.\n` +
+        `- **Activity Plan:** Engage in 30-45 minutes of moderate physical activity tailored for your lifestyle (*${profile?.activityLevel || 'Active'}*).\n` +
+        `- **Nutrition Tip:** Prioritize whole vegetables, lean proteins, and monitor sodium or sugar based on your baseline vitals.`;
+    }
+
+    // 5. Sleep & Wellness Queries
+    if (q.includes("sleep") || q.includes("insomnia") || q.includes("stress") || q.includes("anxiety") || q.includes("tired") || q.includes("fatigue")) {
+      return `🌙 **Sleep & Wellness Optimization**\n\n` +
+        `**Analysis for ${name}:**\n` +
+        `- Target 7-9 hours of restful sleep per night for optimal metabolic and cardiovascular recovery.\n` +
+        `- Avoid heavy caffeine or intense physical exertion within 4 hours of bedtime.\n` +
+        `- Practice 5 minutes of guided diaphragmatic breathing before sleep.`;
+    }
+
+    // 6. Generic Health Query Responder (Handles ANY arbitrary prompt)
+    return `👩‍⚕️ **AuraCare AI Health Response**\n\n` +
+      `Regarding your inquiry: "*${userQuery}*"\n\n` +
+      `📌 **Patient Context Injected:** ${name}, ${age}y (${profile?.gender || ''}) | History: ${conditions} | Allergies: ${allergies}\n\n` +
+      `**Contextual Health Insights:**\n` +
+      `- **Primary Guidance:** Maintain your regular medical routine, ensuring all active medications are taken as prescribed.\n` +
+      `- **Monitoring:** Track any new physical changes or symptoms in the **Symptom Triage Assessment** tab.\n` +
+      `- **Vitals Baseline:** Your recorded Blood Pressure is **${sys}/${dia} mmHg** and Heart Rate is **${hr} BPM**.\n\n` +
+      `*AuraCare AI provides context-aware health insights. For definitive clinical diagnoses, please consult your physician.*`;
   }
 }

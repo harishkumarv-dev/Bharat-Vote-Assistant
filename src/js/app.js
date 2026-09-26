@@ -14,6 +14,8 @@ let profilesList = loadProfiles();
 let currentProfileIndex = 0;
 let currentProfile = profilesList[0] || {};
 let activeMedications = currentProfile.medications ? [...currentProfile.medications] : [];
+let selectedSymptomIds = new Set();
+let currentTriageRegion = 'all';
 let lastTriageResult = null;
 let vitalsChartInstance = null;
 let isAudioOutputEnabled = true;
@@ -460,32 +462,38 @@ async function handleSendMessage() {
   input.value = '';
 
   // Append User Message
-  appendChatMessage(container, 'user', currentProfile.name.split(' ')[0], userText);
+  appendChatMessage(container, 'user', currentProfile.name ? currentProfile.name.split(' ')[0] : 'User', userText);
 
   // Show Typing Indicator
   const typingId = appendTypingIndicator(container);
 
-  // Generate AI Response
-  const aiResult = await aiEngine.generateResponse(userText, currentProfile, currentProfile.vitals, activeMedications);
-  
-  // Remove Typing
-  removeTypingIndicator(container, typingId);
+  try {
+    // Generate AI Response with safe promise resolution
+    const aiResult = await aiEngine.generateResponse(userText, currentProfile, currentProfile.vitals, activeMedications);
+    
+    // Remove Typing
+    removeTypingIndicator(container, typingId);
 
-  // Update Inspector Code Payload
-  const promptCode = document.getElementById('promptPayloadCode');
-  if (promptCode && aiResult.promptUsed) {
-    promptCode.innerText = aiResult.promptUsed;
-  }
+    // Update Inspector Code Payload
+    const promptCode = document.getElementById('promptPayloadCode');
+    if (promptCode && aiResult.promptUsed) {
+      promptCode.innerText = aiResult.promptUsed;
+    }
 
-  // Update Badge
-  updateApiKeyStatusBadge();
+    // Update Badge
+    updateApiKeyStatusBadge();
 
-  // Append AI Response
-  appendChatMessage(container, 'ai', 'AuraCare AI', aiResult.text, aiResult.source);
+    // Append AI Response
+    appendChatMessage(container, 'ai', 'AuraCare AI', aiResult.text, aiResult.source);
 
-  // Audio Playback
-  if (isAudioOutputEnabled && voiceAssistant) {
-    voiceAssistant.speak(aiResult.text);
+    // Audio Playback
+    if (isAudioOutputEnabled && voiceAssistant) {
+      voiceAssistant.speak(aiResult.text);
+    }
+  } catch (err) {
+    console.error("AI Error:", err);
+    removeTypingIndicator(container, typingId);
+    appendChatMessage(container, 'ai', 'AuraCare AI', "⚠️ I encountered a temporary error analyzing your request. Please try again.", "System Alert");
   }
 }
 
@@ -530,35 +538,45 @@ function removeTypingIndicator(container, id) {
   if (el) el.remove();
 }
 
-// Symptom Triage Assessment
+// Symptom Triage Assessment Engine & UI
 function initTriageModule() {
   const runBtn = document.getElementById('runTriageBtn');
   const bodyPaths = document.querySelectorAll('.body-region-path');
 
+  // Pre-select "Chest Pain / Pressure" by default so running triage works out of the box!
+  selectedSymptomIds.add('sym-1');
+
   // Render Symptom Checkboxes
-  renderSymptomCheckboxes('all');
+  renderSymptomCheckboxes(currentTriageRegion);
 
   bodyPaths.forEach(path => {
     path.addEventListener('click', () => {
       bodyPaths.forEach(p => p.classList.remove('selected'));
       path.classList.add('selected');
       const region = path.getAttribute('data-region');
+      currentTriageRegion = region;
+
+      // Auto check top symptom of that region if set is empty
+      const topSymptom = SYMPTOM_DATABASE.symptoms.find(s => s.region === region);
+      if (topSymptom) {
+        selectedSymptomIds.add(topSymptom.id);
+      }
+
       renderSymptomCheckboxes(region);
     });
   });
 
   if (runBtn) {
     runBtn.addEventListener('click', () => {
-      const selected = Array.from(document.querySelectorAll('.symptom-chk:checked')).map(cb => cb.value);
-      const intensity = parseInt(document.getElementById('intensityRange')?.value || 5);
-      const duration = parseInt(document.getElementById('durationInput')?.value || 1);
-
-      if (selected.length === 0) {
-        alert("Please select at least one symptom to assess.");
+      if (selectedSymptomIds.size === 0) {
+        alert("Please check at least one symptom to evaluate.");
         return;
       }
 
-      lastTriageResult = evaluateTriage(selected, duration, intensity, {
+      const intensity = parseInt(document.getElementById('intensityRange')?.value || 5);
+      const duration = parseInt(document.getElementById('durationInput')?.value || 1);
+
+      lastTriageResult = evaluateTriage(Array.from(selectedSymptomIds), duration, intensity, {
         age: currentProfile.age,
         gender: currentProfile.gender,
         conditions: currentProfile.conditions
@@ -567,6 +585,14 @@ function initTriageModule() {
       renderTriageResults(lastTriageResult);
     });
   }
+
+  // Initial render of default pre-selected triage
+  lastTriageResult = evaluateTriage(['sym-1'], 1, 5, {
+    age: currentProfile.age,
+    gender: currentProfile.gender,
+    conditions: currentProfile.conditions
+  });
+  renderTriageResults(lastTriageResult);
 }
 
 function renderSymptomCheckboxes(regionFilter) {
@@ -577,12 +603,46 @@ function renderSymptomCheckboxes(regionFilter) {
     ? SYMPTOM_DATABASE.symptoms 
     : SYMPTOM_DATABASE.symptoms.filter(s => s.region === regionFilter);
 
-  container.innerHTML = filtered.map(s => `
-    <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-glass); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); cursor: pointer;">
-      <input type="checkbox" class="symptom-chk" value="${s.id}">
-      <span style="font-size: 0.9rem;">${s.name} ${s.severityWeight >= 80 ? '⚠️' : ''}</span>
-    </label>
-  `).join('');
+  container.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <span style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase;">
+        ${regionFilter === 'all' ? 'All Symptoms' : `Region: ${regionFilter}`} (${selectedSymptomIds.size} Selected)
+      </span>
+      ${regionFilter !== 'all' ? `
+        <button id="showAllSymptomsBtn" class="btn-profile-action" style="padding: 2px 8px; font-size: 0.72rem;">Show All</button>
+      ` : ''}
+    </div>
+    ${filtered.map(s => `
+      <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-glass); border-radius: var(--radius-sm); border: 1px solid ${selectedSymptomIds.has(s.id) ? 'var(--accent-cyan)' : 'var(--border-glass)'}; cursor: pointer; transition: var(--transition-fast);">
+        <input type="checkbox" class="symptom-chk" value="${s.id}" ${selectedSymptomIds.has(s.id) ? 'checked' : ''}>
+        <span style="font-size: 0.9rem; font-weight: ${selectedSymptomIds.has(s.id) ? '600' : 'normal'};">
+          ${s.name} ${s.severityWeight >= 80 ? '⚠️' : ''}
+        </span>
+      </label>
+    `).join('')}
+  `;
+
+  // Attach Checkbox change handlers to maintain selectedSymptomIds persistent state
+  container.querySelectorAll('.symptom-chk').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (e.target.checked) {
+        selectedSymptomIds.add(val);
+      } else {
+        selectedSymptomIds.delete(val);
+      }
+      renderSymptomCheckboxes(regionFilter);
+    });
+  });
+
+  const showAllBtn = document.getElementById('showAllSymptomsBtn');
+  if (showAllBtn) {
+    showAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('.body-region-path').forEach(p => p.classList.remove('selected'));
+      currentTriageRegion = 'all';
+      renderSymptomCheckboxes('all');
+    });
+  }
 }
 
 function renderTriageResults(result) {
@@ -593,7 +653,7 @@ function renderTriageResults(result) {
   panel.innerHTML = `
     <div style="border-left: 5px solid ${result.level === 'EMERGENCY' ? 'var(--accent-rose)' : result.level === 'URGENT' ? 'var(--accent-amber)' : 'var(--accent-cyan)'}; padding-left: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="patient-badge" style="background: rgba(244,63,94,0.1); color: ${result.level === 'EMERGENCY' ? 'var(--accent-rose)' : 'var(--accent-cyan)'};">
+        <span class="patient-badge" style="background: ${result.level === 'EMERGENCY' ? 'rgba(244,63,94,0.15)' : 'rgba(6,182,212,0.15)'}; color: ${result.level === 'EMERGENCY' ? 'var(--accent-rose)' : 'var(--accent-cyan)'};">
           ${result.title}
         </span>
         <span style="font-size: 1.2rem; font-weight: 800; font-family: var(--font-heading);">
