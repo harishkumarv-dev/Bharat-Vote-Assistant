@@ -1,4 +1,4 @@
-import { SAMPLE_PROFILES } from './data/sampleProfiles.js';
+import { loadProfiles, saveProfiles } from './data/sampleProfiles.js';
 import { SYMPTOM_DATABASE } from './data/symptomDatabase.js';
 import { AuraCareAIEngine } from './modules/aiEngine.js';
 import { evaluateTriage } from './modules/triageEngine.js';
@@ -10,10 +10,10 @@ import { printHealthPassport } from './modules/exportPdf.js';
 import { runInAppVerificationSuite } from './modules/testRunner.js';
 
 // Application State
+let profilesList = loadProfiles();
 let currentProfileIndex = 0;
-let currentProfile = SAMPLE_PROFILES[0];
-let activeMedications = [...currentProfile.medications];
-let selectedSymptomIds = [];
+let currentProfile = profilesList[0] || {};
+let activeMedications = currentProfile.medications ? [...currentProfile.medications] : [];
 let lastTriageResult = null;
 let vitalsChartInstance = null;
 let isAudioOutputEnabled = true;
@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initIcons();
   initThemeToggle();
   initProfileSelector();
+  initPatientCrud();
   initNavigation();
   initChatAssistant();
   initTriageModule();
@@ -82,23 +83,182 @@ function initGenAiInspector() {
   }
 }
 
-// Profile Context Switcher
+// Profile Context Switcher & Dropdown
 function initProfileSelector() {
   const select = document.getElementById('profileSelect');
   if (!select) return;
 
-  select.innerHTML = SAMPLE_PROFILES.map((p, idx) => `<option value="${idx}">${p.name} (${p.age}y, ${p.conditions.join(', ') || 'Healthy'})</option>`).join('');
-  select.value = currentProfileIndex;
+  renderProfileDropdownOptions();
 
   select.addEventListener('change', (e) => {
     currentProfileIndex = parseInt(e.target.value);
-    currentProfile = SAMPLE_PROFILES[currentProfileIndex];
-    activeMedications = [...currentProfile.medications];
+    currentProfile = profilesList[currentProfileIndex] || profilesList[0];
+    activeMedications = currentProfile.medications ? [...currentProfile.medications] : [];
     updateActiveProfileDisplay();
   });
 }
 
+function renderProfileDropdownOptions() {
+  const select = document.getElementById('profileSelect');
+  if (!select) return;
+
+  select.innerHTML = profilesList.map((p, idx) => `
+    <option value="${idx}">${p.name} (${p.age}y, ${p.conditions?.slice(0, 2).join(', ') || 'Healthy'})</option>
+  `).join('');
+  select.value = currentProfileIndex;
+}
+
+// Patient Profile CRUD Operations (Add, Edit, Delete)
+function initPatientCrud() {
+  const addBtn = document.getElementById('addPatientModalBtn');
+  const editBtn = document.getElementById('editPatientModalBtn');
+  const deleteBtn = document.getElementById('deletePatientBtn');
+  const modalBackdrop = document.getElementById('patientModalBackdrop');
+  const closeBtn = document.getElementById('closePatientModalBtn');
+  const cancelBtn = document.getElementById('cancelPatientModalBtn');
+  const form = document.getElementById('patientProfileForm');
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      openPatientModal('ADD');
+    });
+  }
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      openPatientModal('EDIT', currentProfile);
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', handleDeletePatientProfile);
+  }
+
+  if (closeBtn) closeBtn.addEventListener('click', closePatientModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closePatientModal);
+
+  if (form) {
+    form.addEventListener('submit', handleSavePatientProfile);
+  }
+}
+
+function openPatientModal(mode, profileToEdit = null) {
+  const backdrop = document.getElementById('patientModalBackdrop');
+  const title = document.getElementById('patientModalTitle');
+  const editIdInput = document.getElementById('editProfileId');
+
+  if (!backdrop) return;
+
+  if (mode === 'EDIT' && profileToEdit) {
+    title.innerText = `Edit Profile: ${profileToEdit.name}`;
+    editIdInput.value = profileToEdit.id;
+    document.getElementById('profName').value = profileToEdit.name || '';
+    document.getElementById('profAge').value = profileToEdit.age || '';
+    document.getElementById('profGender').value = profileToEdit.gender || 'Male';
+    document.getElementById('profDiet').value = profileToEdit.dietaryPreference || '';
+    document.getElementById('profConditions').value = profileToEdit.conditions?.join(', ') || '';
+    document.getElementById('profAllergies').value = profileToEdit.allergies?.join(', ') || '';
+    document.getElementById('profBpSys').value = profileToEdit.vitals?.bloodPressureSys || 120;
+    document.getElementById('profBpDia').value = profileToEdit.vitals?.bloodPressureDia || 80;
+    document.getElementById('profHeartRate').value = profileToEdit.vitals?.heartRate || 72;
+    document.getElementById('profGlucose').value = profileToEdit.vitals?.glucose || 95;
+    document.getElementById('profWeight').value = profileToEdit.vitals?.weightKg || 70;
+    document.getElementById('profHeight').value = profileToEdit.vitals?.heightCm || 175;
+  } else {
+    title.innerText = 'Add New Patient Profile';
+    editIdInput.value = '';
+    document.getElementById('patientProfileForm').reset();
+  }
+
+  backdrop.classList.add('open');
+  backdrop.setAttribute('aria-hidden', 'false');
+}
+
+function closePatientModal() {
+  const backdrop = document.getElementById('patientModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function handleSavePatientProfile(e) {
+  e.preventDefault();
+
+  const editId = document.getElementById('editProfileId').value;
+  const name = document.getElementById('profName').value.trim();
+  const age = parseInt(document.getElementById('profAge').value) || 30;
+  const gender = document.getElementById('profGender').value;
+  const dietaryPreference = document.getElementById('profDiet').value.trim() || 'Balanced Health';
+  const conditionsStr = document.getElementById('profConditions').value.trim();
+  const allergiesStr = document.getElementById('profAllergies').value.trim();
+
+  const conditions = conditionsStr ? conditionsStr.split(',').map(s => s.trim()) : [];
+  const allergies = allergiesStr ? allergiesStr.split(',').map(s => s.trim()) : ['None reported'];
+
+  const sys = parseInt(document.getElementById('profBpSys').value) || 120;
+  const dia = parseInt(document.getElementById('profBpDia').value) || 80;
+  const hr = parseInt(document.getElementById('profHeartRate').value) || 72;
+  const glu = parseInt(document.getElementById('profGlucose').value) || 95;
+  const weightKg = parseInt(document.getElementById('profWeight').value) || 70;
+  const heightCm = parseInt(document.getElementById('profHeight').value) || 175;
+
+  if (editId) {
+    // Edit Existing
+    const idx = profilesList.findIndex(p => p.id === editId);
+    if (idx !== -1) {
+      profilesList[idx] = {
+        ...profilesList[idx],
+        name, age, gender, dietaryPreference, conditions, allergies,
+        vitals: { bloodPressureSys: sys, bloodPressureDia: dia, heartRate: hr, glucose: glu, weightKg, heightCm }
+      };
+      currentProfileIndex = idx;
+    }
+  } else {
+    // Add New Profile
+    const newProfile = {
+      id: 'profile-' + Date.now(),
+      name, age, gender, dietaryPreference, conditions, allergies,
+      medications: [],
+      vitals: { bloodPressureSys: sys, bloodPressureDia: dia, heartRate: hr, glucose: glu, weightKg, heightCm },
+      activityLevel: "Moderate",
+      dailyCalorieTarget: 2000,
+      waterIntakeGoalL: 2.5
+    };
+    profilesList.push(newProfile);
+    currentProfileIndex = profilesList.length - 1;
+  }
+
+  saveProfiles(profilesList);
+  currentProfile = profilesList[currentProfileIndex];
+  activeMedications = currentProfile.medications ? [...currentProfile.medications] : [];
+
+  renderProfileDropdownOptions();
+  updateActiveProfileDisplay();
+  closePatientModal();
+}
+
+function handleDeletePatientProfile() {
+  if (profilesList.length <= 1) {
+    alert("Cannot delete the only remaining patient profile. System must keep at least 1 active profile.");
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete patient profile "${currentProfile.name}"?`)) {
+    profilesList.splice(currentProfileIndex, 1);
+    currentProfileIndex = 0;
+    currentProfile = profilesList[0];
+    activeMedications = currentProfile.medications ? [...currentProfile.medications] : [];
+
+    saveProfiles(profilesList);
+    renderProfileDropdownOptions();
+    updateActiveProfileDisplay();
+  }
+}
+
 function updateActiveProfileDisplay() {
+  if (!currentProfile) return;
+
   // Update Patient Badge in Header
   const badge = document.getElementById('activePatientBadge');
   if (badge) {
@@ -371,6 +531,9 @@ function initMedicationModule() {
       });
       medInput.value = '';
       if (dosageInput) dosageInput.value = '';
+      
+      currentProfile.medications = [...activeMedications];
+      saveProfiles(profilesList);
       updateActiveProfileDisplay();
     });
   }
@@ -418,6 +581,8 @@ function renderMedicationList() {
 
 window.removeMed = function(idx) {
   activeMedications.splice(idx, 1);
+  currentProfile.medications = [...activeMedications];
+  saveProfiles(profilesList);
   updateActiveProfileDisplay();
 };
 
@@ -427,16 +592,18 @@ function initVitalsDashboard() {
 }
 
 function renderVitalsDashboard() {
+  if (!currentProfile.vitals) return;
+
   const v = currentProfile.vitals;
   const sysEl = document.getElementById('bpSysVal');
   const diaEl = document.getElementById('bpDiaVal');
   const hrEl = document.getElementById('hrVal');
   const gluEl = document.getElementById('gluVal');
 
-  if (sysEl) sysEl.innerText = v.bloodPressureSys;
-  if (diaEl) diaEl.innerText = v.bloodPressureDia;
-  if (hrEl) hrEl.innerText = v.heartRate;
-  if (gluEl) gluEl.innerText = v.glucose;
+  if (sysEl) sysEl.innerText = v.bloodPressureSys || 120;
+  if (diaEl) diaEl.innerText = v.bloodPressureDia || 80;
+  if (hrEl) hrEl.innerText = v.heartRate || 72;
+  if (gluEl) gluEl.innerText = v.glucose || 95;
 
   const bpStatus = classifyBloodPressure(v.bloodPressureSys, v.bloodPressureDia);
   const bpStatusEl = document.getElementById('bpStatusTag');
@@ -450,6 +617,10 @@ function renderVitalsDashboard() {
   if (canvas && window.Chart) {
     if (vitalsChartInstance) vitalsChartInstance.destroy();
 
+    const sys = v.bloodPressureSys || 120;
+    const dia = v.bloodPressureDia || 80;
+    const hr = v.heartRate || 72;
+
     vitalsChartInstance = new window.Chart(canvas, {
       type: 'line',
       data: {
@@ -457,19 +628,19 @@ function renderVitalsDashboard() {
         datasets: [
           {
             label: 'Systolic BP (mmHg)',
-            data: [v.bloodPressureSys - 4, v.bloodPressureSys - 2, v.bloodPressureSys + 3, v.bloodPressureSys, v.bloodPressureSys - 1, v.bloodPressureSys + 2, v.bloodPressureSys],
+            data: [sys - 4, sys - 2, sys + 3, sys, sys - 1, sys + 2, sys],
             borderColor: '#06b6d4',
             tension: 0.3
           },
           {
             label: 'Diastolic BP (mmHg)',
-            data: [v.bloodPressureDia - 2, v.bloodPressureDia - 1, v.bloodPressureDia + 1, v.bloodPressureDia, v.bloodPressureDia - 2, v.bloodPressureDia, v.bloodPressureDia],
+            data: [dia - 2, dia - 1, dia + 1, dia, dia - 2, dia, dia],
             borderColor: '#6366f1',
             tension: 0.3
           },
           {
             label: 'Heart Rate (BPM)',
-            data: [v.heartRate - 3, v.heartRate + 2, v.heartRate - 1, v.heartRate, v.heartRate + 4, v.heartRate - 2, v.heartRate],
+            data: [hr - 3, hr + 2, hr - 1, hr, hr + 4, hr - 2, hr],
             borderColor: '#10b981',
             tension: 0.3
           }
@@ -495,10 +666,12 @@ function initWellnessModule() {
 }
 
 function renderWellnessPlan() {
+  if (!currentProfile || !currentProfile.vitals) return;
+
   const plan = generateWellnessPlan(currentProfile);
   const container = document.getElementById('wellnessPlanContainer');
-  const bmrRes = calculateBMR(currentProfile.vitals.weightKg, currentProfile.vitals.heightCm, currentProfile.age, currentProfile.gender);
-  const bmiRes = calculateBMI(currentProfile.vitals.weightKg, currentProfile.vitals.heightCm);
+  const bmrRes = calculateBMR(currentProfile.vitals.weightKg || 70, currentProfile.vitals.heightCm || 175, currentProfile.age || 30, currentProfile.gender || 'Male');
+  const bmiRes = calculateBMI(currentProfile.vitals.weightKg || 70, currentProfile.vitals.heightCm || 175);
 
   if (!container) return;
 
@@ -517,7 +690,7 @@ function renderWellnessPlan() {
       <div class="vital-card">
         <div class="vital-title">Daily Water Goal</div>
         <div class="vital-value">${plan.waterIntakeL} <span style="font-size:0.9rem;">L</span></div>
-        <div class="vital-status status-normal">${currentProfile.activityLevel}</div>
+        <div class="vital-status status-normal">${currentProfile.activityLevel || 'Active'}</div>
       </div>
     </div>
 
@@ -533,7 +706,7 @@ function renderWellnessPlan() {
           <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 4px;">${plan.meals.lunch}</p>
         </div>
         <div style="background: var(--bg-glass); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-glass);">
-          <strong>Salmon / Dinner</strong>
+          <strong>Dinner</strong>
           <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 4px;">${plan.meals.dinner}</p>
         </div>
         <div style="background: var(--bg-glass); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-glass);">

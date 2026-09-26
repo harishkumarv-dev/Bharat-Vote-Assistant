@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AuraCare AI - Context-Aware Healthcare & Wellness Assistant</title>
-  <meta name="description" content="Smart, dynamic healthcare and wellness AI assistant built for Prompt Wars 5 featuring clinical triage, medication safety radar, and personalized wellness optimization.">
+  <title>AuraCare AI - Smart Context-Aware Healthcare Platform</title>
+  <meta name="description" content="Smart, dynamic healthcare and wellness AI assistant featuring clinical triage, medication safety radar, patient profile management, and personalized wellness optimization.">
   
   <link rel="stylesheet" href="./src/css/main.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -20,7 +20,7 @@
         </div>
         <div>
           <div class="brand-title">AuraCare AI</div>
-          <div class="brand-subtitle">Prompt Wars 5 Entry</div>
+          <div class="brand-subtitle">Smart Health Platform</div>
         </div>
       </div>
 
@@ -51,7 +51,7 @@
         </div>
       </nav>
 
-      <!-- Patient Context Switcher -->
+      <!-- Patient Context Switcher & CRUD Controls -->
       <div class="profile-switcher-card">
         <div class="profile-switcher-header">
           <span>Active Patient Context</span>
@@ -60,6 +60,18 @@
         <select id="profileSelect" class="profile-select" aria-label="Select Patient Context Profile">
           <!-- Populated by JS -->
         </select>
+
+        <div class="profile-action-btns">
+          <button id="addPatientModalBtn" class="btn-profile-action" title="Add New Patient Profile">
+            <i data-lucide="user-plus" style="width: 12px; height: 12px;"></i> Add
+          </button>
+          <button id="editPatientModalBtn" class="btn-profile-action" title="Edit Current Patient Profile">
+            <i data-lucide="user-cog" style="width: 12px; height: 12px;"></i> Edit
+          </button>
+          <button id="deletePatientBtn" class="btn-profile-action delete" title="Delete Active Patient Profile">
+            <i data-lucide="user-minus" style="width: 12px; height: 12px;"></i> Delete
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -84,19 +96,19 @@
 
       <!-- TAB 1: AI Health Assistant -->
       <section id="tab-chat" class="tab-content active" aria-labelledby="chat-heading">
-        <div style="display: flex; gap: 20px; flex-direction: column;">
+        <div class="chat-wrapper">
           <!-- GenAI Live Reasoning Inspector Header Banner -->
-          <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 14px 20px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 12px 18px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="background: var(--gradient-brand); color: white; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.78rem; font-weight: bold;">
-                GENAI LIVE ENGINE ACTIVE
+                GENAI ENGINE ACTIVE
               </span>
-              <span style="font-size: 0.9rem; color: var(--text-muted);">
-                Generative AI combines Google Gemini 1.5 Flash + Real-Time Patient Context Payload
+              <span style="font-size: 0.88rem; color: var(--text-muted);">
+                Real-Time Patient Context Payload Injection Active
               </span>
             </div>
             <button id="toggleInspectorBtn" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem;">
-              🔍 Toggle GenAI Prompt Inspector
+              🔍 Toggle GenAI Inspector
             </button>
           </div>
 
@@ -105,11 +117,12 @@
             <div style="font-weight: bold; color: var(--accent-emerald); margin-bottom: 8px;">
               🤖 DYNAMIC GENAI PROMPT PAYLOAD (Sent to Model in Real-Time):
             </div>
-            <pre id="promptPayloadCode" style="white-space: pre-wrap; word-break: break-word; color: #e2e8f0; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+            <pre id="promptPayloadCode" style="white-space: pre-wrap; word-break: break-word; color: #e2e8f0; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; max-height: 180px; overflow-y: auto;">
 Select a profile or type a query to inspect the dynamic prompt payload...
             </pre>
           </div>
 
+          <!-- Aligned Chat Container -->
           <div class="chat-container">
             <div class="chat-header">
               <div id="activePatientBadge" class="patient-badge">
@@ -296,6 +309,79 @@ Select a profile or type a query to inspect the dynamic prompt payload...
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Add / Edit Patient Profile Modal Backdrop -->
+  <div id="patientModalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="patientModalTitle" class="modal-title">Add New Patient Profile</h3>
+        <button id="closePatientModalBtn" class="btn-icon" style="width: 32px; height: 32px;">✕</button>
+      </div>
+
+      <form id="patientProfileForm">
+        <input type="hidden" id="editProfileId" value="">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="profName">Full Name *</label>
+            <input type="text" id="profName" class="form-control" placeholder="e.g. David Miller" required>
+          </div>
+          <div class="form-group">
+            <label for="profAge">Age (Years) *</label>
+            <input type="number" id="profAge" class="form-control" placeholder="e.g. 45" min="1" max="120" required>
+          </div>
+          <div class="form-group">
+            <label for="profGender">Gender *</label>
+            <select id="profGender" class="form-control">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="profDiet">Dietary Preference</label>
+            <input type="text" id="profDiet" class="form-control" placeholder="e.g. Low Sodium, Vegetarian">
+          </div>
+          <div class="form-group full-width">
+            <label for="profConditions">Medical Conditions (Comma-separated)</label>
+            <input type="text" id="profConditions" class="form-control" placeholder="e.g. Hypertension, Asthma">
+          </div>
+          <div class="form-group full-width">
+            <label for="profAllergies">Documented Allergies (Comma-separated)</label>
+            <input type="text" id="profAllergies" class="form-control" placeholder="e.g. Penicillin, Peanuts">
+          </div>
+          <div class="form-group">
+            <label for="profBpSys">Systolic BP (mmHg)</label>
+            <input type="number" id="profBpSys" class="form-control" value="120">
+          </div>
+          <div class="form-group">
+            <label for="profBpDia">Diastolic BP (mmHg)</label>
+            <input type="number" id="profBpDia" class="form-control" value="80">
+          </div>
+          <div class="form-group">
+            <label for="profHeartRate">Heart Rate (BPM)</label>
+            <input type="number" id="profHeartRate" class="form-control" value="72">
+          </div>
+          <div class="form-group">
+            <label for="profGlucose">Blood Glucose (mg/dL)</label>
+            <input type="number" id="profGlucose" class="form-control" value="95">
+          </div>
+          <div class="form-group">
+            <label for="profWeight">Weight (kg)</label>
+            <input type="number" id="profWeight" class="form-control" value="70">
+          </div>
+          <div class="form-group">
+            <label for="profHeight">Height (cm)</label>
+            <input type="number" id="profHeight" class="form-control" value="175">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+          <button type="button" id="cancelPatientModalBtn" class="btn-profile-action" style="padding: 10px 18px;">Cancel</button>
+          <button type="submit" class="btn-primary" style="padding: 10px 20px;">Save Profile</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="./src/js/app.js"></script>

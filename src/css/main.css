@@ -78,7 +78,7 @@ body {
 
 /* Sidebar Navigation */
 .sidebar {
-  width: 280px;
+  width: 290px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-glass);
   display: flex;
@@ -94,14 +94,14 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 8px 24px 8px;
+  padding: 0 8px 20px 8px;
   border-bottom: 1px solid var(--border-glass);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .brand-logo {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   background: var(--gradient-brand);
   border-radius: var(--radius-md);
   display: flex;
@@ -109,11 +109,12 @@ body {
   justify-content: center;
   color: white;
   box-shadow: var(--shadow-glow);
+  flex-shrink: 0;
 }
 
 .brand-title {
   font-family: var(--font-heading);
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 800;
   background: var(--gradient-brand);
   -webkit-background-clip: text;
@@ -201,14 +202,49 @@ body {
   font-size: 0.85rem;
   outline: none;
   cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.profile-action-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-profile-action {
+  flex: 1;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition-fast);
+}
+
+.btn-profile-action:hover {
+  background: var(--border-glow);
+  color: var(--accent-cyan);
+}
+
+.btn-profile-action.delete:hover {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--accent-rose);
+  border-color: var(--accent-rose);
 }
 
 /* Main Content Wrapper */
 .main-content {
-  margin-left: 280px;
+  margin-left: 290px;
   flex: 1;
-  padding: 32px 40px;
+  padding: 28px 36px;
   max-width: 1400px;
+  width: calc(100% - 290px);
 }
 
 /* Top Header Bar */
@@ -216,21 +252,21 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-glass);
 }
 
 .page-title {
   font-family: var(--font-heading);
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 700;
 }
 
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .btn-icon {
@@ -304,24 +340,34 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Chat Assistant View */
+/* AI Health Assistant Container Alignment Fixes */
+.chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 180px);
+  height: calc(100vh - 220px);
+  min-height: 540px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-glass);
   background: var(--bg-card);
   overflow: hidden;
+  box-shadow: var(--shadow-lg);
 }
 
 .chat-header {
-  padding: 16px 24px;
+  padding: 14px 20px;
   background: var(--bg-glass);
   border-bottom: 1px solid var(--border-glass);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .patient-badge {
@@ -339,17 +385,18 @@ body {
 
 .chat-messages {
   flex: 1;
-  padding: 24px;
+  padding: 20px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  scroll-behavior: smooth;
 }
 
 .message {
   display: flex;
-  gap: 14px;
-  max-width: 80%;
+  gap: 12px;
+  max-width: 82%;
 }
 
 .message.user {
@@ -366,6 +413,7 @@ body {
   justify-content: center;
   font-weight: bold;
   flex-shrink: 0;
+  font-size: 1.1rem;
 }
 
 .message.ai .message-avatar {
@@ -385,6 +433,7 @@ body {
   border-radius: var(--radius-md);
   font-size: 0.94rem;
   line-height: 1.6;
+  word-wrap: break-word;
 }
 
 .message.user .message-bubble {
@@ -393,12 +442,13 @@ body {
 }
 
 .chat-input-bar {
-  padding: 16px 24px;
+  padding: 14px 20px;
   background: var(--bg-glass);
   border-top: 1px solid var(--border-glass);
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .chat-input {
@@ -431,6 +481,7 @@ body {
   justify-content: center;
   cursor: pointer;
   transition: var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .btn-mic.listening {
@@ -449,10 +500,11 @@ body {
 .prompt-chips {
   display: flex;
   gap: 10px;
-  padding: 12px 24px;
+  padding: 10px 20px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-glass);
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .chip {
@@ -566,6 +618,102 @@ body {
 .status-warning { color: var(--accent-amber); }
 .status-danger { color: var(--accent-rose); }
 
+/* Modal Dialog Styles for Adding/Editing Patient Profiles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 620px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: translateY(20px);
+  transition: transform 0.25s ease;
+}
+
+.modal-backdrop.open .modal-card {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.modal-title {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.form-control {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-primary);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.form-control:focus {
+  border-color: var(--accent-cyan);
+}
+
 /* Responsive Adjustments */
 @media (max-width: 1024px) {
   .sidebar {
@@ -578,6 +726,7 @@ body {
   .main-content {
     margin-left: 80px;
     padding: 20px;
+    width: calc(100% - 80px);
   }
   .triage-grid {
     grid-template-columns: 1fr;

@@ -1,5 +1,5 @@
-// Preset User Personas for Dynamic Contextual AI Testing
-export const SAMPLE_PROFILES = [
+// Default User Personas
+export const INITIAL_PROFILES = [
   {
     id: "profile-1",
     name: "Sarah Jenkins",
@@ -83,3 +83,19 @@ export const SAMPLE_PROFILES = [
     bioSummary: "28yo female with anemia and recurring migraines. Focuses on iron absorption optimization (Vitamin C pairing), hydration tracking, and stress management."
   }
 ];
+
+export function loadProfiles() {
+  const saved = localStorage.getItem('AURACARE_PROFILES');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to parse saved profiles, falling back to defaults:", e);
+    }
+  }
+  return [...INITIAL_PROFILES];
+}
+
+export function saveProfiles(profiles) {
+  localStorage.setItem('AURACARE_PROFILES', JSON.stringify(profiles));
+}
