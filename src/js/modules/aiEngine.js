@@ -2,9 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { analyzeMedicationSafety } from './medSafety.js';
 
 /**
- * Live Google Gemini AI Engine with Dynamic Model Auto-Discovery
- * Lists available models directly from Google AI API to guarantee valid key detection
- * and auto-selects the newest working model.
+ * Live Google Gemini AI Engine with Dynamic Model Auto-Discovery,
+ * clear key suspension detection, and smooth fallback management.
  */
 
 export class AuraCareAIEngine {
@@ -54,7 +53,6 @@ export class AuraCareAIEngine {
       if (response.ok) {
         const data = await response.json();
         if (data.models && Array.isArray(data.models)) {
-          // Filter models that support generateContent
           const generateModels = data.models
             .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
             .map(m => m.name.replace(/^models\//, ''));
@@ -66,7 +64,10 @@ export class AuraCareAIEngine {
         }
       } else {
         const errJson = await response.json().catch(() => ({}));
-        const msg = errJson.error?.message || `HTTP ${response.status} Error`;
+        let msg = errJson.error?.message || `HTTP ${response.status} Error`;
+        if (msg.toLowerCase().includes('suspended')) {
+          msg = "This Google API Key has been suspended or disabled in Google AI Studio / Google Cloud. Please generate a new key at https://aistudio.google.com/app/apikey";
+        }
         return { validKey: false, error: msg };
       }
     } catch (err) {
@@ -90,7 +91,6 @@ export class AuraCareAIEngine {
     const discovery = await this.discoverAvailableModels(cleanKey);
 
     if (discovery.validKey && discovery.models.length > 0) {
-      // Pick best available model (prioritize 2.0-flash, 1.5-flash, 1.5-pro, 2.0-flash-lite, etc.)
       const priorityOrder = [
         'gemini-2.0-flash',
         'gemini-1.5-flash',
@@ -103,7 +103,6 @@ export class AuraCareAIEngine {
 
       let chosenModel = discovery.models.find(m => priorityOrder.includes(m)) || discovery.models[0];
 
-      // Test generation with chosen model
       const testResult = await this.tryGenerateWithModel(cleanKey, chosenModel, "Hello! Confirm Gemini API connection.");
       if (testResult.success) {
         this.activeModel = chosenModel;
@@ -115,7 +114,6 @@ export class AuraCareAIEngine {
         };
       }
 
-      // If chosenModel failed generation, test other discovered models
       for (const altModel of discovery.models) {
         if (altModel === chosenModel) continue;
         const altTest = await this.tryGenerateWithModel(cleanKey, altModel, "Hello! Confirm Gemini API connection.");
@@ -128,17 +126,6 @@ export class AuraCareAIEngine {
             message: `Valid API Key! Connected to Google Gemini using model ${altModel}.` 
           };
         }
-      }
-    }
-
-    // Fallback candidates test if models.list was blocked
-    const hardcodedCandidates = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite', 'gemini-pro'];
-    for (const model of hardcodedCandidates) {
-      const res = await this.tryGenerateWithModel(cleanKey, model, "Hello! Confirm Gemini connection.");
-      if (res.success) {
-        this.activeModel = model;
-        this.setApiKey(cleanKey);
-        return { success: true, model, message: `Valid API Key! Connected to Google Gemini using model ${model}.` };
       }
     }
 
@@ -181,7 +168,11 @@ export class AuraCareAIEngine {
         }
       } else {
         const errJson = await res.json().catch(() => ({}));
-        return { success: false, error: errJson.error?.message || `HTTP ${res.status}` };
+        let msg = errJson.error?.message || `HTTP ${res.status}`;
+        if (msg.toLowerCase().includes('suspended')) {
+          msg = "API key suspended by Google. Create a new key at https://aistudio.google.com/app/apikey";
+        }
+        return { success: false, error: msg };
       }
     } catch (err) {
       return { success: false, error: err.message };
@@ -225,7 +216,6 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
     const prompt = this.buildSystemContextPrompt(userQuery, profile, currentVitals, activeMeds);
     this.lastError = null;
 
-    // Check if API key is present
     if (!this.apiKey || this.apiKey.trim().length < 8) {
       return {
         text: `🔑 **Google Gemini API Key Required**\n\n` +
@@ -233,7 +223,7 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
               `👉 **How to get a key:**\n` +
               `1. Get a free API Key from [Google AI Studio](https://aistudio.google.com/app/apikey).\n` +
               `2. Click the **🔑 Gemini API** button in the top right header bar.\n` +
-              `3. Paste your key and click **Save Key**.\n\n` +
+              `3. Paste your new key and click **Save Key**.\n\n` +
               `*(Note: You can also set \`VITE_GEMINI_API_KEY\` in your \`.env\` file).*`,
         source: 'System Guidance (API Key Needed)',
         timestamp: new Date().toLocaleTimeString(),
@@ -245,13 +235,14 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
 
     const cleanKey = this.apiKey.trim();
 
-    // Auto-discover available models if not loaded
     if (this.availableModels.length === 0) {
       const disc = await this.discoverAvailableModels(cleanKey);
       if (disc.validKey && disc.models.length > 0) {
         if (!disc.models.includes(this.activeModel)) {
           this.activeModel = disc.models[0];
         }
+      } else if (disc.error) {
+        this.lastError = disc.error;
       }
     }
 
@@ -265,7 +256,6 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
       'gemini-pro'
     ];
 
-    // Deduplicate models to try
     const uniqueModels = [...new Set(modelsToTry)];
 
     for (const model of uniqueModels) {
@@ -284,12 +274,14 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
       }
     }
 
-    // Return detailed error if all models failed
+    // Return clear guidance if key is suspended or failed
     return {
-      text: `⚠️ **Gemini API Call Failed**\n\n` +
-            `Google API returned error: *${this.lastError || "Invalid API key or model unavailable"}*\n\n` +
-            `Please click **🔑 Gemini API** at the top right to verify your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).`,
-      source: `Gemini API Error (${this.lastError || 'Key Error'})`,
+      text: `⚠️ **Gemini API Key Error**\n\n` +
+            `Google API returned error: *${this.lastError || "API Key Suspended or Invalid"}*\n\n` +
+            `👉 **Solution:**\n` +
+            `1. Get a new free key at [Google AI Studio](https://aistudio.google.com/app/apikey).\n` +
+            `2. Click **🔑 Gemini API** in the top header bar, paste your new key, and click **Save Key**.`,
+      source: `Gemini API Error (${this.lastError || 'Key Suspended'})`,
       timestamp: new Date().toLocaleTimeString(),
       promptUsed: prompt,
       isLiveApi: false,
