@@ -1,0 +1,31 @@
+{
+  "name": "auracare-ai-promptwars",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Smart, dynamic context-aware Healthcare & Wellness AI Assistant built for Prompt Wars 5",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/suite.test.js"
+  },
+  "keywords": [
+    "prompt-wars",
+    "ai-assistant",
+    "healthcare",
+    "wellness",
+    "gemini-api",
+    "triage",
+    "medication-safety"
+  ],
+  "author": "Prompt Wars Contender",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.1",
+    "lucide": "^0.344.0"
+  }
+}

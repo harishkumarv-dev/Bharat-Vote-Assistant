@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuraCare AI - Context-Aware Healthcare & Wellness Assistant</title>
+  <meta name="description" content="Smart, dynamic healthcare and wellness AI assistant built for Prompt Wars 5 featuring clinical triage, medication safety radar, and personalized wellness optimization.">
+  
+  <link rel="stylesheet" href="./src/css/main.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+      <div class="brand-container">
+        <div class="brand-logo">
+          <i data-lucide="activity"></i>
+        </div>
+        <div>
+          <div class="brand-title">AuraCare AI</div>
+          <div class="brand-subtitle">Prompt Wars 5 Entry</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" data-tab="chat" role="button" tabindex="0" aria-label="AI Assistant Tab">
+          <i data-lucide="bot"></i>
+          <span>AI Health Assistant</span>
+        </div>
+        <div class="nav-item" data-tab="triage" role="button" tabindex="0" aria-label="Symptom Triage Tab">
+          <i data-lucide="stethoscope"></i>
+          <span>Symptom Triage</span>
+        </div>
+        <div class="nav-item" data-tab="meds" role="button" tabindex="0" aria-label="Medication Safety Tab">
+          <i data-lucide="pill"></i>
+          <span>Medication Radar</span>
+        </div>
+        <div class="nav-item" data-tab="vitals" role="button" tabindex="0" aria-label="Vitals Analytics Tab">
+          <i data-lucide="line-chart"></i>
+          <span>Vitals Analytics</span>
+        </div>
+        <div class="nav-item" data-tab="wellness" role="button" tabindex="0" aria-label="Wellness Planner Tab">
+          <i data-lucide="apple"></i>
+          <span>Wellness Planner</span>
+        </div>
+        <div class="nav-item" data-tab="tests" role="button" tabindex="0" aria-label="Verification Suite Tab">
+          <i data-lucide="check-circle-2"></i>
+          <span>Test Verification</span>
+        </div>
+      </nav>
+
+      <!-- Patient Context Switcher -->
+      <div class="profile-switcher-card">
+        <div class="profile-switcher-header">
+          <span>Active Patient Context</span>
+          <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+        </div>
+        <select id="profileSelect" class="profile-select" aria-label="Select Patient Context Profile">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Action Bar -->
+      <header class="top-bar">
+        <h1 class="page-title">Healthcare & Wellness AI Platform</h1>
+        <div class="top-actions">
+          <button id="apiKeyConfigBtn" class="btn-icon" title="Configure Gemini API Key" aria-label="Configure Gemini API Key">
+            <i data-lucide="key"></i>
+          </button>
+          <button id="themeToggleBtn" class="btn-icon" title="Toggle Dark/Light Mode" aria-label="Toggle Theme">
+            <i data-lucide="sun-moon"></i>
+          </button>
+          <button id="exportPassportBtn" class="btn-primary" aria-label="Export Health Passport PDF">
+            <i data-lucide="file-text"></i>
+            <span>Export Health Passport</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: AI Health Assistant -->
+      <section id="tab-chat" class="tab-content active" aria-labelledby="chat-heading">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div id="activePatientBadge" class="patient-badge">
+              <!-- Populated by JS -->
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="audioOutputToggle" class="btn-icon" title="Toggle Voice Output" style="color: var(--accent-cyan);">
+                <i data-lucide="volume-2"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="chatMessages" class="chat-messages" role="log" aria-live="polite">
+            <div class="message ai">
+              <div class="message-avatar">🤖</div>
+              <div class="message-bubble">
+                <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: var(--accent-cyan);">AuraCare AI</div>
+                Hello! I am your context-aware Healthcare & Wellness Assistant. I automatically incorporate your active medical history, current vitals, and medication safety checks into every answer.<br><br>
+                How can I assist your health journey today?
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Chips -->
+          <div class="prompt-chips">
+            <div class="chip">What side effects should I expect from Lisinopril?</div>
+            <div class="chip">Check for interactions between Warfarin and Ibuprofen</div>
+            <div class="chip">Evaluate my current Blood Pressure reading</div>
+            <div class="chip">Suggest a diabetic-friendly meal plan for dinner</div>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask a health question or describe symptoms..." aria-label="Type your message">
+            <button id="micBtn" class="btn-mic" title="Voice Input" aria-label="Activate Microphone">
+              <i data-lucide="mic"></i>
+            </button>
+            <button id="sendChatBtn" class="btn-primary" style="padding: 12px 20px;">
+              <i data-lucide="send"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Symptom Triage -->
+      <section id="tab-triage" class="tab-content" aria-labelledby="triage-heading">
+        <div class="glass-panel">
+          <h2 style="font-family: var(--font-heading); margin-bottom: 8px;">Clinical Symptom Triage & Urgency Evaluation</h2>
+          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 24px;">Select symptom region or check symptoms below to run a clinical urgency matrix assessment.</p>
+
+          <div class="triage-grid">
+            <!-- Left: Interactive Body Map & Symptom List -->
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 12px;">Interactive Symptom Selector</h3>
+              
+              <!-- SVG Anatomy Selector -->
+              <svg class="body-map-svg" viewBox="0 0 200 350">
+                <!-- Head -->
+                <circle class="body-region-path" data-region="head" cx="100" cy="45" r="28" />
+                <!-- Chest -->
+                <rect class="body-region-path" data-region="chest" x="70" y="80" width="60" height="70" rx="10" />
+                <!-- Abdomen -->
+                <rect class="body-region-path" data-region="abdomen" x="72" y="155" width="56" height="55" rx="8" />
+                <!-- Arms/Limbs -->
+                <rect class="body-region-path" data-region="limbs" x="35" y="85" width="28" height="120" rx="10" />
+                <rect class="body-region-path" data-region="limbs" x="137" y="85" width="28" height="120" rx="10" />
+                <!-- Legs -->
+                <rect class="body-region-path" data-region="limbs" x="72" y="215" width="24" height="110" rx="8" />
+                <rect class="body-region-path" data-region="limbs" x="104" y="215" width="24" height="110" rx="8" />
+              </svg>
+
+              <div id="symptomListContainer" style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Right: Intensity & Parameters -->
+            <div>
+              <div style="background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Pain / Severity Intensity (1 - 10):</label>
+                <input type="range" id="intensityRange" min="1" max="10" value="5" style="width: 100%; accent-color: var(--accent-cyan);" oninput="document.getElementById('intensityVal').innerText = this.value">
+                <div style="text-align: right; font-weight: bold; color: var(--accent-cyan); margin-top: 4px;">Level: <span id="intensityVal">5</span> / 10</div>
+              </div>
+
+              <div style="background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Duration of Symptoms (Days):</label>
+                <input type="number" id="durationInput" min="1" max="30" value="1" style="width: 100%; background: var(--bg-primary); border: 1px solid var(--border-glass); color: var(--text-main); padding: 10px; border-radius: var(--radius-sm);">
+              </div>
+
+              <button id="runTriageBtn" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;">
+                <i data-lucide="shield-alert"></i>
+                <span>Run Clinical Triage Evaluation</span>
+              </button>
+
+              <div id="triageResultPanel" style="display: none; margin-top: 24px; padding: 20px; background: var(--bg-glass); border-radius: var(--radius-md); border: 1px solid var(--border-glass);">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Medication Radar -->
+      <section id="tab-meds" class="tab-content" aria-labelledby="meds-heading">
+        <div class="glass-panel">
+          <h2 style="font-family: var(--font-heading); margin-bottom: 16px;">Medication Safety & Cross-Interaction Radar</h2>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 12px;">Active Regimen Manager</h3>
+              <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <input type="text" id="newMedInput" class="chat-input" placeholder="Medication Name (e.g. Aspirin, Ibuprofen)" aria-label="Medication Name">
+                <input type="text" id="newDosageInput" class="chat-input" placeholder="Dosage (e.g. 200mg)" style="width: 120px;" aria-label="Dosage">
+                <button id="addMedBtn" class="btn-primary" style="padding: 10px 16px;">Add</button>
+              </div>
+
+              <div id="medicationListContainer">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 12px;">Automated Clinical Safety Analysis</h3>
+              <div id="medSafetyBox">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Vitals Dashboard -->
+      <section id="tab-vitals" class="tab-content" aria-labelledby="vitals-heading">
+        <div class="vitals-grid">
+          <div class="vital-card">
+            <div class="vital-title">Systolic BP</div>
+            <div class="vital-value" id="bpSysVal">120</div>
+            <div id="bpStatusTag" class="vital-status status-normal">Normal Range</div>
+          </div>
+          <div class="vital-card">
+            <div class="vital-title">Diastolic BP</div>
+            <div class="vital-value" id="bpDiaVal">80</div>
+            <div class="vital-status status-normal">Optimal</div>
+          </div>
+          <div class="vital-card">
+            <div class="vital-title">Heart Rate</div>
+            <div class="vital-value" id="hrVal">72</div>
+            <div class="vital-status status-normal">Resting BPM</div>
+          </div>
+          <div class="vital-card">
+            <div class="vital-title">Blood Glucose</div>
+            <div class="vital-value" id="gluVal">95</div>
+            <div class="vital-status status-normal">mg/dL (Fasting)</div>
+          </div>
+        </div>
+
+        <div class="glass-panel">
+          <h3 style="font-family: var(--font-heading); margin-bottom: 16px;">7-Day Vitals Trend Line</h3>
+          <canvas id="vitalsChartCanvas" style="max-height: 380px;"></canvas>
+        </div>
+      </section>
+
+      <!-- TAB 5: Wellness Planner -->
+      <section id="tab-wellness" class="tab-content" aria-labelledby="wellness-heading">
+        <div id="wellnessPlanContainer">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- TAB 6: Automated Verification Suite -->
+      <section id="tab-tests" class="tab-content" aria-labelledby="tests-heading">
+        <div class="glass-panel">
+          <h2 style="font-family: var(--font-heading); margin-bottom: 8px;">Automated Verification & Test Suite</h2>
+          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 20px;">Run real-time unit and integration tests directly inside the UI to validate clinical triage algorithms, drug safety matrices, and health math calculators.</p>
+
+          <button id="runSuiteBtn" class="btn-primary" style="margin-bottom: 24px;">
+            <i data-lucide="play"></i>
+            <span>Execute All Verification Tests</span>
+          </button>
+
+          <div id="suiteOutputContainer">
+            <!-- Test results render here -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./src/js/app.js"></script>
+</body>
+</html>
