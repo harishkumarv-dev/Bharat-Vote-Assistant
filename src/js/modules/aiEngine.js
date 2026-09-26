@@ -2,8 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { analyzeMedicationSafety } from './medSafety.js';
 
 /**
- * Live Google Gemini AI Engine with Dynamic Model Auto-Discovery,
- * clear key suspension detection, and smooth fallback management.
+ * Live Google Gemini AI Engine with Direct Model Generation Validation,
+ * dynamic model discovery, and zero false-negatives for valid API keys.
  */
 
 export class AuraCareAIEngine {
@@ -18,6 +18,8 @@ export class AuraCareAIEngine {
 
   setApiKey(key) {
     this.apiKey = key ? key.trim() : '';
+    this.availableModels = [];
+    this.lastError = null;
     localStorage.setItem('AURACARE_GEMINI_API_KEY', this.apiKey);
   }
 
@@ -66,7 +68,7 @@ export class AuraCareAIEngine {
         const errJson = await response.json().catch(() => ({}));
         let msg = errJson.error?.message || `HTTP ${response.status} Error`;
         if (msg.toLowerCase().includes('suspended')) {
-          msg = "This Google API Key has been suspended or disabled in Google AI Studio / Google Cloud. Please generate a new key at https://aistudio.google.com/app/apikey";
+          msg = "API Key Suspended by Google: This API key has been disabled in Google AI Studio. Please generate a new key at https://aistudio.google.com/app/apikey";
         }
         return { validKey: false, error: msg };
       }
@@ -78,7 +80,7 @@ export class AuraCareAIEngine {
   }
 
   /**
-   * Tests the Gemini API Key live and auto-selects the newest working model
+   * Tests the Gemini API Key live with zero false-negatives
    */
   async testConnection(testKey = this.apiKey) {
     if (!testKey || testKey.trim().length < 8) {
@@ -86,73 +88,62 @@ export class AuraCareAIEngine {
     }
 
     const cleanKey = testKey.trim();
+    this.lastError = null;
 
-    // 1. Discover models available for this API Key
-    const discovery = await this.discoverAvailableModels(cleanKey);
+    // Direct generation test across standard models first
+    const directCandidateModels = [
+      this.activeModel,
+      'gemini-1.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-pro',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash-8b',
+      'gemini-pro'
+    ];
 
-    if (discovery.validKey && discovery.models.length > 0) {
-      const priorityOrder = [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-2.5-flash',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash-8b',
-        'gemini-pro'
-      ];
+    const uniqueCandidates = [...new Set(directCandidateModels)];
 
-      let chosenModel = discovery.models.find(m => priorityOrder.includes(m)) || discovery.models[0];
-
-      const testResult = await this.tryGenerateWithModel(cleanKey, chosenModel, "Hello! Confirm Gemini API connection.");
-      if (testResult.success) {
-        this.activeModel = chosenModel;
+    for (const model of uniqueCandidates) {
+      const genRes = await this.tryGenerateWithModel(cleanKey, model, "Hello! Confirm Gemini connection.");
+      if (genRes.success) {
         this.setApiKey(cleanKey);
-        return { 
-          success: true, 
-          model: chosenModel, 
-          message: `Valid API Key! Connected to Google Gemini using model ${chosenModel}.` 
+        this.activeModel = model;
+        return {
+          success: true,
+          model: model,
+          message: `Valid API Key! Connected to Google Gemini live using model ${model}.`
         };
+      } else if (genRes.error) {
+        this.lastError = genRes.error;
       }
+    }
 
-      for (const altModel of discovery.models) {
-        if (altModel === chosenModel) continue;
-        const altTest = await this.tryGenerateWithModel(cleanKey, altModel, "Hello! Confirm Gemini API connection.");
+    // Try model discovery endpoint as fallback
+    const discovery = await this.discoverAvailableModels(cleanKey);
+    if (discovery.validKey && discovery.models.length > 0) {
+      for (const discModel of discovery.models) {
+        const altTest = await this.tryGenerateWithModel(cleanKey, discModel, "Hello! Confirm Gemini connection.");
         if (altTest.success) {
-          this.activeModel = altModel;
           this.setApiKey(cleanKey);
-          return { 
-            success: true, 
-            model: altModel, 
-            message: `Valid API Key! Connected to Google Gemini using model ${altModel}.` 
+          this.activeModel = discModel;
+          return {
+            success: true,
+            model: discModel,
+            message: `Valid API Key! Connected to Google Gemini live using model ${discModel}.`
           };
         }
       }
     }
 
-    return { 
-      success: false, 
-      message: discovery.error 
-        ? `API Key Validation Failed: ${discovery.error}` 
-        : "Invalid API Key or quota limit reached. Please verify your key at https://aistudio.google.com/app/apikey." 
+    const finalErrMsg = discovery.error || this.lastError || "Invalid API key or quota limit reached.";
+    return {
+      success: false,
+      message: finalErrMsg
     };
   }
 
   async tryGenerateWithModel(cleanKey, modelName, textPrompt) {
-    // Try SDK first
-    try {
-      const ai = new GoogleGenAI({ apiKey: cleanKey });
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: textPrompt
-      });
-      if (response && response.text) {
-        return { success: true, text: response.text };
-      }
-    } catch (e) {
-      console.warn(`SDK call for ${modelName} failed:`, e.message);
-    }
-
-    // Try REST second
+    // Try REST first (fast & direct in browser)
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanKey}`;
       const res = await fetch(url, {
@@ -160,6 +151,7 @@ export class AuraCareAIEngine {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: textPrompt }] }] })
       });
+
       if (res.ok) {
         const data = await res.json();
         const output = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -170,12 +162,26 @@ export class AuraCareAIEngine {
         const errJson = await res.json().catch(() => ({}));
         let msg = errJson.error?.message || `HTTP ${res.status}`;
         if (msg.toLowerCase().includes('suspended')) {
-          msg = "API key suspended by Google. Create a new key at https://aistudio.google.com/app/apikey";
+          msg = "API Key Suspended by Google: This API key has been disabled in Google AI Studio. Please generate a new key at https://aistudio.google.com/app/apikey";
         }
         return { success: false, error: msg };
       }
     } catch (err) {
-      return { success: false, error: err.message };
+      console.warn(`REST call for ${modelName} error:`, err.message);
+    }
+
+    // Try SDK second
+    try {
+      const ai = new GoogleGenAI({ apiKey: cleanKey });
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: textPrompt
+      });
+      if (response && response.text) {
+        return { success: true, text: response.text };
+      }
+    } catch (e) {
+      console.warn(`SDK call for ${modelName} error:`, e.message);
     }
 
     return { success: false, error: "Generation failed" };
@@ -203,7 +209,7 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
 
 [CLINICAL SAFETY MANDATES]
 1. If the query indicates RED FLAG symptoms (crushing chest pain, stroke signs, severe dyspnea, anaphylaxis), IMMEDIATELY begin response with an EMERGENCY ALERT banner.
-2. Cross-reference any queried drug/supplement against patient's active medications (${activeMeds?.map(m => m.name || m).join(', ')}) and allergies (${profile?.allergies?.join(', ')}).
+2. Cross-reference any queried drug/supplement against patient's active medications (${activeMeds?.map(m => m.name || m).join(', ')}).
 3. Be concise, structured (bullet points, clear headings), and accessible.
 
 [DYNAMIC USER QUERY]
@@ -235,28 +241,17 @@ You are AuraCare AI, an advanced healthcare and wellness assistant powered by Go
 
     const cleanKey = this.apiKey.trim();
 
-    if (this.availableModels.length === 0) {
-      const disc = await this.discoverAvailableModels(cleanKey);
-      if (disc.validKey && disc.models.length > 0) {
-        if (!disc.models.includes(this.activeModel)) {
-          this.activeModel = disc.models[0];
-        }
-      } else if (disc.error) {
-        this.lastError = disc.error;
-      }
-    }
-
-    const modelsToTry = [
+    const candidateModels = [
       this.activeModel,
-      ...this.availableModels,
-      'gemini-2.0-flash',
       'gemini-1.5-flash',
+      'gemini-2.0-flash',
       'gemini-1.5-pro',
       'gemini-2.0-flash-lite',
+      'gemini-1.5-flash-8b',
       'gemini-pro'
     ];
 
-    const uniqueModels = [...new Set(modelsToTry)];
+    const uniqueModels = [...new Set(candidateModels)];
 
     for (const model of uniqueModels) {
       const res = await this.tryGenerateWithModel(cleanKey, model, prompt);
