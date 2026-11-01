@@ -136,7 +136,7 @@ export function AppHeader({
                 <Icon size={16} aria-hidden="true" />
                 {item.label}
                 {item.id === 'studio' && aiConfigured && (
-                  <span className="nav-ai-dot" aria-label="AI connected" />
+                  <span className="nav-ai-dot" role="status" aria-label="AI connected" />
                 )}
               </button>
             );

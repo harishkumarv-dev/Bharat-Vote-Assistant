@@ -512,7 +512,12 @@ function VendorCard({
           <p className="category-empty">No checklist questions for this category.</p>
         )}
         {total > 3 && (
-          <button type="button" className="text-button vendor-check-more" onClick={onToggleExpanded}>
+          <button
+            type="button"
+            className="text-button vendor-check-more"
+            aria-expanded={expanded}
+            onClick={onToggleExpanded}
+          >
             {expanded ? 'Show fewer questions' : `Show all ${total} questions`}
           </button>
         )}

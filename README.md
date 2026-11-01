@@ -146,7 +146,9 @@ npm run build
 ```
 
 ### Test Suite Summary:
-- **127/127 passing unit tests** across 14 test suites:
+- **143/143 passing unit tests** across 16 test suites:
+  - `src/state/plannerReducer.test.ts` (9 tests) — Complete state machine transitions, event lifecycle, undo/delete fallbacks.
+  - `src/domain/catalog.test.ts` (7 tests) — Domain catalog integrity, category weights, vendor checklist questions, timeline templates.
   - `src/ai/client.test.ts` (16 tests) — Error mapping, retry strategies, key sanitization.
   - `src/ai/schema.test.ts` (6 tests) — Zod schema validation for AI concept outputs.
   - `src/domain/plan.test.ts` (14 tests) — Event state lifecycle, updates, drafting.
@@ -164,10 +166,11 @@ npm run build
 
 ---
 
-## 7. Accessibility & Usability (WCAG Compliant)
+## 7. Accessibility & Usability (WCAG 2.1 AA Compliant)
 
-- **Semantic HTML5:** Native landmark tags (`<header>`, `<main>`, `<nav>`, `<section>`).
-- **High-Contrast Design:** Color palette meets WCAG AAA standards for legibility.
+- **Semantic HTML5 & Landmarks:** Native tags (`<header>`, `<main id="main-content">`, `<nav>`, `<section>`) with `<a href="#main-content" className="skip-link">Skip to content</a>`.
+- **WAI-ARIA Disclosure Patterns:** All collapsible panels, brief drawers, and checklists implement explicit `aria-expanded` and `aria-controls` bindings.
+- **High-Contrast Design:** Color palette meets WCAG AAA standards for legibility with zero color-only status indicators.
 - **Keyboard Navigation & ARIA:** Modals feature focus trapping, ESC dismiss, and descriptive `aria-label` tags on interactive buttons and dialogs.
 - **Sensory & Dietary Awareness:** First-class accommodation tracking directly inside event briefings and vendor contracts.
 

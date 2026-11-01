@@ -33,7 +33,9 @@ export function Modal({
   const closeRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
-  closeRef.current = onClose;
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;

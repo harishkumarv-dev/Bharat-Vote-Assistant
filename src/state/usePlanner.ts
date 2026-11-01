@@ -33,7 +33,9 @@ export function usePlanner(): PlannerStore {
   const [workspace, dispatch] = useReducer(plannerReducer, initial.workspace);
   const [saveError, setSaveError] = useState<string | null>(null);
   const latest = useRef(workspace);
-  latest.current = workspace;
+  useEffect(() => {
+    latest.current = workspace;
+  }, [workspace]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

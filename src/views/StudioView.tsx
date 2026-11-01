@@ -269,13 +269,18 @@ export function StudioView() {
             </span>
             <span>{formatDate(event.basics.date, { month: 'short', day: 'numeric' })}</span>
             <span>{event.basics.guestCount.toLocaleString('en-US')} guests</span>
-            <button type="button" onClick={() => setBriefOpen((current) => !current)}>
+            <button
+              type="button"
+              aria-expanded={briefOpen}
+              aria-controls="brief-drawer-panel"
+              onClick={() => setBriefOpen((current) => !current)}
+            >
               {briefOpen ? 'Hide plan summary' : 'What the coach sees'}
             </button>
           </div>
 
           {briefOpen && (
-            <div className="brief-drawer">
+            <div id="brief-drawer-panel" className="brief-drawer">
               <div className="brief-drawer-head">
                 <strong>Plan summary shared with the coach</strong>
                 <span>No guest names, emails, or phone numbers</span>
