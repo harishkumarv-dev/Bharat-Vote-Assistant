@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import {
   ArrowUp,
   DatabaseBackup,
@@ -28,13 +28,14 @@ import { EditBriefModal } from './components/EditBriefModal';
 import { WorkspaceDataModal } from './components/WorkspaceDataModal';
 import { GalaMark, Wordmark } from './components/Brand';
 import { ToastViewport, type ToastState } from './components/Toast';
-import { OverviewView } from './views/OverviewView';
-import { ConceptView } from './views/ConceptView';
-import { BudgetView } from './views/BudgetView';
-import { GuestsView } from './views/GuestsView';
-import { VendorsView } from './views/VendorsView';
-import { TimelineView } from './views/TimelineView';
-import { StudioView } from './views/StudioView';
+
+const OverviewView = lazy(() => import('./views/OverviewView').then((m) => ({ default: m.OverviewView })));
+const ConceptView = lazy(() => import('./views/ConceptView').then((m) => ({ default: m.ConceptView })));
+const BudgetView = lazy(() => import('./views/BudgetView').then((m) => ({ default: m.BudgetView })));
+const GuestsView = lazy(() => import('./views/GuestsView').then((m) => ({ default: m.GuestsView })));
+const VendorsView = lazy(() => import('./views/VendorsView').then((m) => ({ default: m.VendorsView })));
+const TimelineView = lazy(() => import('./views/TimelineView').then((m) => ({ default: m.TimelineView })));
+const StudioView = lazy(() => import('./views/StudioView').then((m) => ({ default: m.StudioView })));
 
 const VIEW_TITLES: Record<ViewId, string> = {
   overview: 'Overview',
@@ -271,13 +272,21 @@ export function App() {
       )}
 
       <main id="main-content" className="app-main" ref={mainRef} tabIndex={-1}>
-        {view === 'overview' && <OverviewView onEditEvent={() => setEditEventOpen(true)} />}
-        {view === 'concept' && <ConceptView onEditBrief={() => setEditBriefOpen(true)} />}
-        {view === 'budget' && <BudgetView onEditEvent={() => setEditEventOpen(true)} />}
-        {view === 'guests' && <GuestsView />}
-        {view === 'vendors' && <VendorsView />}
-        {view === 'timeline' && <TimelineView />}
-        {view === 'studio' && <StudioView />}
+        <Suspense
+          fallback={
+            <div className="view-loading" aria-busy="true" style={{ padding: '3rem', textAlign: 'center' }}>
+              <p style={{ color: 'var(--color-muted)' }}>Loading studio view...</p>
+            </div>
+          }
+        >
+          {view === 'overview' && <OverviewView onEditEvent={() => setEditEventOpen(true)} />}
+          {view === 'concept' && <ConceptView onEditBrief={() => setEditBriefOpen(true)} />}
+          {view === 'budget' && <BudgetView onEditEvent={() => setEditEventOpen(true)} />}
+          {view === 'guests' && <GuestsView />}
+          {view === 'vendors' && <VendorsView />}
+          {view === 'timeline' && <TimelineView />}
+          {view === 'studio' && <StudioView />}
+        </Suspense>
       </main>
 
       <footer className="app-footer">
