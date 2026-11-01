@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState, type Dispatch } from 'react';
 import type { Workspace } from '../types';
-import { emptyWorkspace } from '../domain/factory';
+import { initialWorkspace } from '../domain/factory';
 import { loadWorkspace, saveWorkspace } from '../domain/persistence';
 import { plannerReducer, type PlannerAction } from './plannerReducer';
 
@@ -11,11 +11,11 @@ interface InitialState {
 
 function initialState(): InitialState {
   if (typeof window === 'undefined') {
-    return { workspace: emptyWorkspace(), loadError: null };
+    return { workspace: initialWorkspace(), loadError: null };
   }
   const result = loadWorkspace(window.localStorage);
   return {
-    workspace: result.workspace ?? emptyWorkspace(),
+    workspace: result.workspace ?? initialWorkspace(),
     loadError: result.error,
   };
 }

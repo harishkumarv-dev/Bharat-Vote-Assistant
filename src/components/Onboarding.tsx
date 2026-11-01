@@ -81,11 +81,15 @@ export function Onboarding({ aiConfigured, onCreate, onSample, onOpenSettings }:
                   the small personal touches — in one clear place.
                 </p>
                 <div className="welcome-actions">
-                  <a className="btn btn-primary btn-large" href="#choose-event">
-                    Start planning <ArrowRight size={18} aria-hidden="true" />
-                  </a>
-                  <button type="button" className="btn btn-secondary btn-large" onClick={onSample}>
-                    Explore a sample plan
+                  <button type="button" className="btn btn-primary btn-large" onClick={onSample}>
+                    Open Live Dashboard <ArrowRight size={18} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-large"
+                    onClick={() => setActiveType('wedding')}
+                  >
+                    Create New Event
                   </button>
                 </div>
                 <ul className="welcome-points" aria-label="What makes Gala different">
