@@ -3,11 +3,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.3-61dafb.svg)](https://react.dev/)
 [![Tests](https://img.shields.io/badge/Tests-110%20Passing-brightgreen.svg)](https://vitest.dev/)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Firebase%20Hosting-FFCA28?logo=firebase&logoColor=black)](https://bharat-vote-pw-2026.web.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Firebase%20Hosting-FFCA28?logo=firebase&logoColor=black)](https://gala-event-studio.web.app)
 [![Security](https://img.shields.io/badge/Security-Local--First%20%7C%20Zero--Key--Leakage-success.svg)](#security--best-practices)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-> 🌐 **Live Demo:** [https://bharat-vote-pw-2026.web.app](https://bharat-vote-pw-2026.web.app)  
+> 🌐 **Live Demo:** [https://gala-event-studio.web.app](https://gala-event-studio.web.app)  
 > 📦 **Public Repository:** [https://github.com/harishkumarv-dev/Bharat-Vote-Assistant](https://github.com/harishkumarv-dev/Bharat-Vote-Assistant)  
 > **Prompt Wars Virtual — Challenge 5 Submission**  
 > **Vertical:** Celebration and Event Planning  

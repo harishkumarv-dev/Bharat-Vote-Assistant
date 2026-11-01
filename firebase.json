@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "gala-event-studio",
     "public": "dist",
     "ignore": [
       "firebase.json",
