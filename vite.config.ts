@@ -32,9 +32,29 @@ function cspPlugin(): Plugin {
   };
 }
 
+function cssMinifierPlugin(): Plugin {
+  return {
+    name: 'gala-css-minifier',
+    apply: 'build',
+    enforce: 'post',
+    generateBundle(_, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type === 'asset' && file.fileName.endsWith('.css') && typeof file.source === 'string') {
+          file.source = file.source
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\r?\n/g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/\s*([;{}:,])\s*/g, '$1')
+            .replace(/;}/g, '}');
+        }
+      }
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [react(), cspPlugin()],
+  plugins: [react(), cspPlugin(), cssMinifierPlugin()],
   build: {
     target: 'es2022',
     sourcemap: false,

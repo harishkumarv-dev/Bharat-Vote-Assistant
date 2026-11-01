@@ -2,7 +2,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.3-61dafb.svg)](https://react.dev/)
-[![Tests](https://img.shields.io/badge/Tests-110%20Passing-brightgreen.svg)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-127%20Passing-brightgreen.svg)](https://vitest.dev/)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Firebase%20Hosting-FFCA28?logo=firebase&logoColor=black)](https://gala-event-studio.web.app)
 [![Security](https://img.shields.io/badge/Security-Local--First%20%7C%20Zero--Key--Leakage-success.svg)](#security--best-practices)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
@@ -146,15 +146,18 @@ npm run build
 ```
 
 ### Test Suite Summary:
-- **110/110 passing unit tests** across 11 test suites:
+- **127/127 passing unit tests** across 14 test suites:
   - `src/ai/client.test.ts` (16 tests) — Error mapping, retry strategies, key sanitization.
   - `src/ai/schema.test.ts` (6 tests) — Zod schema validation for AI concept outputs.
   - `src/domain/plan.test.ts` (14 tests) — Event state lifecycle, updates, drafting.
+  - `src/domain/factory.test.ts` (4 tests) — Event creation across archetypes, sanitization, sample workspace.
   - `src/domain/budget.test.ts` (11 tests) — Calculations, category summaries, variance.
   - `src/domain/timeline.test.ts` (10 tests) — Milestone generation, short runways, RFC-compliant `.ics` folding.
   - `src/domain/guests.test.ts` (15 tests) — RSVP aggregations, plus-ones, dietary metrics.
   - `src/domain/vendors.test.ts` (7 tests) — Readiness metrics, essential vendor detection.
   - `src/domain/health.test.ts` (8 tests) — Weighted plan health score, dynamic trade-off insights.
+  - `src/domain/money.test.ts` (7 tests) — Currency formatting, compact notation, safe parsing and sums.
+  - `src/state/aiSettings.test.ts` (6 tests) — Key security, tab session isolation, model switching.
   - `src/domain/persistence.test.ts` (10 tests) — Backup/restore, BOM handling, corrupt file recovery.
   - `src/domain/validation.test.ts` (6 tests) — Schema integrity, boundary checking.
   - `src/domain/dates.test.ts` (7 tests) — ISO date calculations and edge cases.
