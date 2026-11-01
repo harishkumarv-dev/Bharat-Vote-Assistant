@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Gala — AI event planning studio">
+  <rect width="1200" height="630" fill="#F6F1E8"/>
+  <circle cx="1090" cy="70" r="210" fill="#EADCC8" opacity="0.7"/>
+  <circle cx="1010" cy="560" r="260" fill="#E3E9DF" opacity="0.8"/>
+  <g transform="translate(88 86)">
+    <rect width="58" height="58" rx="15" fill="#24211D"/>
+    <path d="M15.5 43V29.5C15.5 21.49 22.5 15 31 15s15.5 6.49 15.5 14.5V32" fill="none" stroke="#F6F1E8" stroke-width="4" stroke-linecap="round"/>
+    <path d="M15.5 43h15" fill="none" stroke="#F6F1E8" stroke-width="4" stroke-linecap="round"/>
+    <path d="M42 39c.45 2.2 1.9 3.65 4.1 4.1-2.2.45-3.65 1.9-4.1 4.1-.45-2.2-1.9-3.65-4.1-4.1 2.2-.45 3.65-1.9 4.1-4.1Z" fill="#D87955"/>
+  </g>
+  <text x="166" y="128" font-family="Georgia, 'Times New Roman', serif" font-size="46" fill="#24211D" letter-spacing="-1">gala</text>
+  <text x="88" y="280" font-family="Georgia, 'Times New Roman', serif" font-size="78" fill="#24211D" letter-spacing="-2">Plan the moment.</text>
+  <text x="88" y="366" font-family="Georgia, 'Times New Roman', serif" font-size="64" fill="#B4472C" font-style="italic" letter-spacing="-2">We'll hold the details.</text>
+  <text x="90" y="432" font-family="Arial, sans-serif" font-size="24" fill="#5E584F">A calm, AI-assisted studio for weddings, birthdays,</text>
+  <text x="90" y="468" font-family="Arial, sans-serif" font-size="24" fill="#5E584F">and community gatherings.</text>
+  <g transform="translate(88 510)" font-family="Arial, sans-serif" font-size="18" fill="#24211D">
+    <rect x="0" y="0" width="196" height="44" rx="22" fill="#FFFDF9" stroke="#DED2C0"/>
+    <text x="20" y="28">Budget &amp; guest list</text>
+    <rect x="212" y="0" width="170" height="44" rx="22" fill="#FFFDF9" stroke="#DED2C0"/>
+    <text x="232" y="28">Vendor plan</text>
+    <rect x="398" y="0" width="190" height="44" rx="22" fill="#FFFDF9" stroke="#DED2C0"/>
+    <text x="418" y="28">Calm timeline</text>
+  </g>
+  <g transform="translate(760 190)">
+    <rect width="340" height="330" rx="28" fill="#FFFDF9" stroke="#DED2C0"/>
+    <text x="34" y="56" font-family="Arial, sans-serif" font-size="14" fill="#6E675D" letter-spacing="2.5">PLAN CONFIDENCE</text>
+    <text x="34" y="132" font-family="Georgia, serif" font-size="64" fill="#24211D">86</text>
+    <text x="126" y="132" font-family="Arial, sans-serif" font-size="18" fill="#6E675D">/ 100</text>
+    <rect x="34" y="164" width="272" height="12" rx="6" fill="#EFE6D8"/>
+    <rect x="34" y="164" width="234" height="12" rx="6" fill="#4C6B57"/>
+    <text x="34" y="218" font-family="Arial, sans-serif" font-size="16" fill="#5E584F">Next up</text>
+    <circle cx="42" cy="250" r="7" fill="#B4472C"/>
+    <text x="60" y="256" font-family="Arial, sans-serif" font-size="16" fill="#24211D">Confirm final headcount</text>
+    <circle cx="42" cy="286" r="7" fill="#C08A3E"/>
+    <text x="60" y="292" font-family="Arial, sans-serif" font-size="16" fill="#24211D">Share the run-of-show</text>
+  </g>
+</svg>

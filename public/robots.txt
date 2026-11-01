@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# Gala is a client-side planning tool. There is no private server content to index.
